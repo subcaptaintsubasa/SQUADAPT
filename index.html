@@ -1,0 +1,1272 @@
+
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>サカつく2026 スカッドシミュレーター SQUADAPT</title>
+  <!-- ファビコン & アプリアイコン設定 -->
+  <link rel="icon" type="image/png" href="./icon.png">
+  <link rel="apple-touch-icon" href="./icon.png">
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="./database.js"></script>
+  <style>
+    /* ─────────────────────────────────────────────────────────────
+       共通ユーティリティ
+       ───────────────────────────────────────────────────────────── */
+    .scrollbar-thin::-webkit-scrollbar { width: 6px; height: 6px; }
+    .animate-fadeIn { animation: fadeIn 0.2s ease-out; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* ─────────────────────────────────────────────────────────────
+       🌙 新ダークモード (チタン・オニキス / 高コントラスト)
+       ───────────────────────────────────────────────────────────── */
+    body.theme-dark {
+      background-color: #090a0f;
+      color: #f1f5f9;
+    }
+    .theme-dark .glass-panel {
+      background: rgba(18, 20, 29, 0.88);
+      backdrop-filter: blur(14px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.7);
+    }
+    .theme-dark .scrollbar-thin::-webkit-scrollbar-thumb { background: #2d3345; border-radius: 4px; }
+
+    /* ─────────────────────────────────────────────────────────────
+       ☀️ ライトモード (スタジアム・クリーンホワイト)
+       ───────────────────────────────────────────────────────────── */
+    body.theme-light {
+      background-color: #f4f6f9;
+      color: #1e293b;
+    }
+
+    /* メインガラスパネル */
+    body.theme-light .glass-panel {
+      background: rgba(255, 255, 255, 0.94);
+      backdrop-filter: blur(14px);
+      border: 1px solid #e2e8f0;
+      box-shadow: 0 8px 24px -4px rgba(15, 23, 42, 0.06), 0 2px 6px -1px rgba(15, 23, 42, 0.04);
+    }
+
+    /* ダーク系背景のコンポーネントをライト調に自動変換 */
+    body.theme-light .bg-slate-950,
+    body.theme-light .bg-slate-900 {
+      background-color: #ffffff !important;
+      border-color: #e2e8f0 !important;
+      color: #1e293b !important;
+    }
+    body.theme-light .bg-slate-950\/80,
+    body.theme-light .bg-slate-950\/90,
+    body.theme-light .bg-slate-950\/95,
+    body.theme-light .bg-slate-950\/70,
+    body.theme-light .bg-slate-950\/60,
+    body.theme-light .bg-slate-950\/50,
+    body.theme-light .bg-slate-950\/40 {
+      background-color: rgba(255, 255, 255, 0.95) !important;
+      border-color: #e2e8f0 !important;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    }
+    body.theme-light .bg-slate-900\/80,
+    body.theme-light .bg-slate-900\/90 {
+      background-color: #f8fafc !important;
+      border-color: #e2e8f0 !important;
+    }
+    body.theme-light .bg-slate-800,
+    body.theme-light .bg-slate-800\/50,
+    body.theme-light .bg-slate-800\/60 {
+      background-color: #f1f5f9 !important;
+      border-color: #cbd5e1 !important;
+      color: #334155 !important;
+    }
+
+    /* 文字色・コントラストの最適化 */
+    body.theme-light .text-white {
+      color: #0f172a !important;
+    }
+    body.theme-light .text-slate-200,
+    body.theme-light .text-slate-300 {
+      color: #334155 !important;
+    }
+    body.theme-light .text-slate-400,
+    body.theme-light .text-slate-500 {
+      color: #64748b !important;
+    }
+
+    /* アクセントカラーのトーン調整 (白背景で見やすい濃さに) */
+    body.theme-light .text-\[\#00FF66\] {
+      color: #059669 !important; /* ディープエメラルド */
+    }
+    body.theme-light .text-\[\#00E5FF\] {
+      color: #2563eb !important; /* サファイアブルー */
+    }
+    body.theme-light .text-amber-400,
+    body.theme-light .text-amber-300 {
+      color: #d97706 !important; /* ウォームゴールド */
+    }
+    body.theme-light .text-cyan-400,
+    body.theme-light .text-cyan-300 {
+      color: #0284c7 !important;
+    }
+    body.theme-light .text-purple-300 {
+      color: #7c3aed !important;
+    }
+
+    /* 入力フォーム・セレクトボックス */
+    body.theme-light input[type="text"],
+    body.theme-light select {
+      background-color: #ffffff !important;
+      border-color: #cbd5e1 !important;
+      color: #0f172a !important;
+    }
+    body.theme-light input[type="text"]:focus,
+    body.theme-light select:focus {
+      border-color: #059669 !important;
+      outline: 2px solid rgba(5, 150, 105, 0.2) !important;
+    }
+
+    /* 爽快なデイススタジアム・ピッチグラデーション */
+    body.theme-light .bg-gradient-to-b.from-emerald-950.via-emerald-900.to-emerald-950 {
+      background: linear-gradient(180deg, #15803d 0%, #166534 50%, #14532d 100%) !important;
+      border-color: #86efac !important;
+      box-shadow: 0 12px 32px -4px rgba(22, 101, 52, 0.25) !important;
+    }
+    body.theme-light .bg-slate-950\/70,
+    body.theme-light .border-dashed.border-emerald-400\/60 {
+      background-color: rgba(20, 83, 45, 0.5) !important;
+      border-color: rgba(255, 255, 255, 0.6) !important;
+      color: #ffffff !important;
+    }
+
+    /* ピッチ上の選手ネームプレート */
+    body.theme-light .border-slate-700 {
+      border-color: #e2e8f0 !important;
+    }
+    body.theme-light .scrollbar-thin::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body class="min-h-screen pb-16">
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useMemo, useCallback, useRef } = React;
+
+    // ─────────────────────────────────────────────────────────────
+    // 定数・基本ロジック
+    // ─────────────────────────────────────────────────────────────
+    const OFFSETS = { '☆3': 0, '☆3+': 16, '☆3++': 33, '☆4': 65, '☆4+': 81, '☆4++': 98, '☆5': 130 };
+    const POLICIES = ['リアクション', 'カウンター', 'ポゼッション', 'ムービング'];
+    const RARITY_SEQ = [null, '☆3', '☆3+', '☆3++', '☆4', '☆4+', '☆4++', '☆5'];
+    
+    const ALL_PLAYSTYLES = window.SAKATSUKU_DATA?.PLAY_STYLES || [
+      "オーソドックスGK","スイーパーGK","ストッパー","組立CB","スプリントCB","守備的LB","守備的RB",
+      "ハードマーカー","セントラルDM","パサーDM","ドリブラーLM","サイドアタッカーLM","ドリブラーRM",
+      "サイドアタッカーRM","セントラルAM","パサーAM","アタッカー","ドリブラーLW","サイドアタッカーLW",
+      "ワイドストライカーLW","ドリブラーRW","サイドアタッカーRW","ワイドストライカーRW","ポストプレーヤー","ラインブレーカー","ストライカー"
+    ];
+
+    const getBaseName = (name) => name ? name.replace(/\s*[\(（].*?[\)）]\s*/g, '').trim() : '';
+
+    const normalizeString = (str) => {
+      if (!str) return '';
+      return str.replace(/[\u30a1-\u30f6]/g, match => String.fromCharCode(match.charCodeAt(0) - 0x60)).toLowerCase();
+    };
+
+// プレイスタイルの系統名を抽出する正規化関数
+    function getBasePlayStyle(styleStr) {
+      if (!styleStr) return '';
+      let s = styleStr.replace(/ブレイカー/g, 'ブレーカー').trim();
+      
+      if (s.startsWith('サイドアタッカー')) return 'サイドアタッカー';
+      if (s.startsWith('ワイドストライカー')) return 'ワイドストライカー';
+      if (s.startsWith('ドリブラー')) return 'ドリブラー';
+      if (s.startsWith('パサー')) return 'パサー';
+      if (s.startsWith('セントラル')) return 'セントラルMF';
+      
+      // FB(フルバック)系の統一
+      if (s.startsWith('攻撃的')) return '攻撃的FB';
+      if (s.startsWith('守備的')) return '守備的FB';
+      if (s.startsWith('クリエイティブ')) return 'クリエイティブFB';
+
+      if (s === 'ストライカー') return 'ストライカー';
+      if (s === 'アタッカー') return 'アタッカー';
+      if (s === 'ラインブレーカー') return 'ラインブレーカー';
+      if (s === 'ポストプレーヤー') return 'ポストプレーヤー';
+      if (s === 'ストッパー') return 'ストッパー';
+      if (s.startsWith('組立')) return '組立CB';
+      if (s.startsWith('スプリント')) return 'スプリントCB';
+      if (s.startsWith('ハードマーカー')) return 'ハードマーカー';
+      if (s.startsWith('オーソドックス')) return 'オーソドックスGK';
+      if (s.startsWith('スイーパー')) return 'スイーパーGK';
+      
+      // 末尾のポジション英字 (LW, RW, LM, RM, DM, AM, CB, LFB, RFB, GK) を除去
+      return s.replace(/(LW|RW|LM|RM|DM|AM|CB|LFB|RFB|GK|SB|FB|MF)$/i, '').trim();
+    }
+
+    // プレイスタイル要求判定
+    function checkStyleReq(player, reqStyle, minLvl) {
+      if (!player || !reqStyle) return true;
+      const pStyles = [player.playStyle, ...(player.subPlayStyles || [])].filter(Boolean);
+      
+      const reqBase = getBasePlayStyle(reqStyle);
+
+      const match = pStyles.some(s => {
+        const pBase = getBasePlayStyle(s);
+        return pBase === reqBase;
+      });
+
+      const lvlMap = { 'Ⅰ': 1, 'Ⅱ': 2, 'Ⅲ': 3, 'Ⅳ': 4, 'Ⅴ': 5 };
+      const lvl = lvlMap[player.playStyleLevel] || parseInt(player.playStyleLevel) || 1;
+      return match && lvl >= minLvl;
+    }
+
+    // 総合力・能力値計算 (育成後目安 / 未育成モード対応)
+    function getPlayerOverall(player, rarity, isMaxMode = false) {
+      if (!rarity || typeof rarity !== 'string') return 0;
+      const baseRarity = player.baseRarity || player.rarity || '☆3';
+      const offsetDiff = (OFFSETS[rarity] || 0) - (OFFSETS[baseRarity] || 0);
+
+      if (isMaxMode && player.maxEnhanced) {
+        const maxOffsetDiff = (OFFSETS[rarity] || 0) - (OFFSETS['☆5'] || 130);
+        return (player.maxEnhanced.overall || 0) + (maxOffsetDiff * 18);
+      }
+      return (player.overall || 0) + (offsetDiff * 18);
+    }
+
+    function getPlayerEffectivePower(player, rarity, customBuffs, isMaxMode = false) {
+      if (!rarity || typeof rarity !== 'string') return 0;
+      const overall = getPlayerOverall(player, rarity, isMaxMode);
+      
+      let buffMult = 1.0;
+      const rate = (customBuffs?.rate || 20) / 100;
+      if (customBuffs?.nationalities?.includes(player.nationality)) buffMult += rate;
+      if (customBuffs?.policies?.includes(player.policy)) buffMult += rate;
+      
+      return Math.floor(overall * buffMult);
+    }
+
+    // 詳細ステータス取得 (育成目安モード対応)
+    const getCategoryTotal = (player, catKey, isMaxMode = false) => {
+      if (!player) return 0;
+      const source = (isMaxMode && player.maxEnhanced?.detailStats) ? player.maxEnhanced : player;
+      if (source.detailStats && source.detailStats[catKey]) {
+        return Object.values(source.detailStats[catKey]).reduce((sum, v) => sum + (Number(v) || 0), 0);
+      }
+      return source.baseStats?.[catKey] || 0;
+    };
+
+    const getPlayerTotalStats18 = (player, isMaxMode = false) => {
+      if (!player) return 0;
+      const source = (isMaxMode && player.maxEnhanced?.detailStats) ? player.maxEnhanced : player;
+      if (!source.detailStats) {
+        if (!source.baseStats) return 0;
+        return Object.values(source.baseStats).reduce((sum, v) => sum + (Number(v) || 0), 0);
+      }
+      let total = 0;
+      Object.values(source.detailStats).forEach(cat => Object.values(cat).forEach(v => total += (Number(v) || 0)));
+      return total;
+    };
+
+    // ─────────────────────────────────────────────────────────────
+    // フォーメーション & コンボデータ
+    // ─────────────────────────────────────────────────────────────
+    const FORMATION_COMBOS = [
+      { id: 'selecao70', name: "セレソン’70", rank: '金', policy: 'リアクション', formationId: '343c_selecao', buffs: [{ name: '決定力', val: 100 }, { name: 'パスカット', val: 100 }, { name: 'タックル', val: 60 }, { name: 'マーク', val: 60 }], specialBrazil: true },
+      { id: 'goldenZonen94', name: "ゴーデンゾーネン'94", rank: '金', policy: 'リアクション', formationId: '343c_golden', buffs: [{ name: 'キック精度', val: 80 }, { name: '突破力', val: 80 }, { name: 'コンタクト', val: 80 }, { name: 'スタミナ', val: 80 }] },
+      { id: 'selecaoDasQuinas16', name: "セレソン・ダス・キナス'16", rank: '金', policy: 'リアクション', formationId: '442a_quinas', buffs: [{ name: 'パスカット', val: 80 }, { name: 'ジャンプ', val: 80 }, { name: 'コンタクト', val: 80 }, { name: '走力', val: 80 }] },
+      { id: 'alvinegroPraiano', name: "アルヴィネグロ・プライアーノ’11", rank: '金', policy: 'リアクション', formationId: '442e_alvinegro', buffs: [{ name: 'タックル', val: 60 }, { name: 'マーク', val: 60 }, { name: '決定力', val: 100 }, { name: 'キック力', val: 100 }] },
+      { id: 'encarnados23', name: "エンカルナードス’23", rank: '金', policy: 'リアクション', formationId: '433b_encarnados', buffs: [{ name: 'パスカット', val: 80 }, { name: 'マーク', val: 80 }, { name: 'ジャンプ', val: 80 }, { name: '冷静さ', val: 80 }] },
+      { id: 'nerazzurro10', name: 'ネラッズーロ’10', rank: '金', policy: 'ムービング', formationId: '433b_nerazzurro', buffs: [{ name: 'タックル', val: 60 }, { name: 'マーク', val: 80 }, { name: '決定力', val: 80 }, { name: 'コンタクト', val: 100 }] },
+      { id: 'canaria06', name: "カナリア軍団’06", rank: '金', policy: 'ムービング', formationId: '442c_canaria', buffs: [{ name: 'パスカット', val: 80 }, { name: 'マーク', val: 80 }, { name: '走力', val: 80 }, { name: '敏捷性', val: 80 }] },
+      { id: 'albiceleste01', name: "アルビセレステ’01", rank: '金', policy: 'ムービング', formationId: '343a_albiceleste', buffs: [{ name: 'ジャンプ', val: 80 }, { name: 'コンタクト', val: 80 }, { name: '走力', val: 80 }, { name: '敏捷性', val: 80 }] },
+      { id: 'soberano94', name: "ソベラーノ’94", rank: '金', policy: 'ムービング', formationId: '442e_soberano', buffs: [{ name: 'キック力', val: 80 }, { name: '突破力', val: 80 }, { name: 'コンタクト', val: 80 }, { name: 'スタミナ', val: 80 }] },
+      { id: 'blauGrana15', name: "ブラウ・グラーナ’15", rank: '金', policy: 'ポゼッション', formationId: '433a_blauGrana', buffs: [{ name: 'タックル', val: 60 }, { name: 'マーク', val: 80 }, { name: '決定力', val: 80 }, { name: 'キック精度', val: 80 }] },
+      { id: 'losCafeteros94', name: "ロス・カフェテロス’94", rank: '金', policy: 'ポゼッション', formationId: '442d_losCafeteros', buffs: [{ name: 'パスカット', val: 80 }, { name: 'マーク', val: 80 }, { name: '走力', val: 80 }, { name: 'キック力', val: 80 }] },
+      { id: 'laRoja24', name: "ラ・ロハ’24", rank: '金', policy: 'ポゼッション', formationId: '433b_laRoja', buffs: [{ name: '冷静さ', val: 80 }, { name: 'キック精度', val: 80 }, { name: 'パスカット', val: 80 }, { name: 'コンタクト', val: 80 }] },
+      { id: 'laDea22', name: "ラ・デア’22", rank: '金', policy: 'ポゼッション', formationId: '352b_laDea', buffs: [{ name: '冷静さ', val: 80 }, { name: 'パスカット', val: 80 }, { name: 'ジャンプ', val: 80 }, { name: 'コンタクト', val: 80 }] },
+      { id: 'blueImpact26', name: "ブルー・インパクト’26", rank: '金', policy: 'カウンター', formationId: '361a_blueImpact', buffs: [{ name: 'タックル', val: 60 }, { name: 'マーク', val: 60 }, { name: '決定力', val: 100 }, { name: 'コンタクト', val: 100 }] },
+      { id: 'euskaldunak12', name: "エウスカルドゥナク’12", rank: '金', policy: 'カウンター', formationId: '343c_euskaldunak', buffs: [{ name: 'タックル', val: 60 }, { name: 'マーク', val: 80 }, { name: '決定力', val: 80 }, { name: '冷静さ', val: 100 }] },
+      { id: 'river18', name: "リーベル’18", rank: '金', policy: 'カウンター', formationId: '433b_river', buffs: [{ name: 'パスカット', val: 80 }, { name: 'マーク', val: 80 }, { name: 'ジャンプ', val: 80 }, { name: 'キック力', val: 80 }] },
+      { id: 'diavolo99', name: "ディアボロ・ディ・ミラノ’99", rank: '金', policy: 'カウンター', formationId: '343b_diavolo', buffs: [{ name: 'キック力', val: 80 }, { name: '突破力', val: 80 }, { name: 'ジャンプ', val: 80 }, { name: 'コンタクト', val: 80 }] },
+      { id: 'lesBleus98', name: "レ・ブルー’98", rank: '金', policy: 'カウンター', formationId: '442d_lesBleus', buffs: [{ name: 'キック力', val: 80 }, { name: 'ジャンプ', val: 80 }, { name: 'コンタクト', val: 80 }, { name: '敏捷性', val: 80 }] },
+      { id: 'azzurri14', name: "アズーリ’14", rank: '銀', policy: 'リアクション', formationId: '352b_azzurri', buffs: [{ name: '冷静さ', val: 80 }, { name: 'コンタクト', val: 80 }, { name: 'ジャンプ', val: 80 }] },
+      { id: 'friulani98', name: "イ・フリウラーニ’98", rank: '銀', policy: 'リアクション', formationId: '343b_friulani', buffs: [{ name: 'パスカット', val: 80 }, { name: 'キープ力', val: 80 }, { name: '敏捷性', val: 80 }] },
+      { id: 'crociati99', name: "クロチャーティ’99", rank: '銀', policy: 'リアクション', formationId: '532b_crociati', buffs: [{ name: '決定力', val: 80 }, { name: 'パスカット', val: 80 }, { name: 'ジャンプ', val: 80 }] },
+      { id: 'hollywood01', name: "FCハリウッド’01", rank: '銀', policy: 'リアクション', formationId: '541a_hollywood', buffs: [{ name: 'キープ力', val: 60 }, { name: 'パスカット', val: 60 }, { name: 'コンタクト', val: 60 }] },
+      { id: 'azzurri06', name: "アズーリ’06", rank: '銀', policy: 'リアクション', formationId: '451b_azzurri', buffs: [{ name: '突破力', val: 60 }, { name: 'ジャンプ', val: 60 }, { name: '敏捷性', val: 60 }] },
+      { id: 'gulag94', name: "ブロ・グルト’94", rank: '銀', policy: 'リアクション', formationId: '523a_gulag', buffs: [{ name: 'コンタクト', val: 80 }, { name: '走力', val: 80 }, { name: 'キック力', val: 80 }] },
+      { id: 'grifoni99', name: "グリフォーニ’99", rank: '銀', policy: 'リアクション', formationId: '442c_grifoni', buffs: [{ name: 'キック力', val: 80 }, { name: 'ロングパス', val: 80 }, { name: 'ジャンプ', val: 80 }] },
+      { id: 'blueGaru22', name: "ブルー・ガル’22", rank: '銀', policy: 'ムービング', formationId: '361b_blueGaru', buffs: [{ name: 'ストッパー', val: 80 }, { name: '組立CB', val: 80 }, { name: 'セントラルMF', val: 80 }] },
+      { id: 'danishDynamite18', name: "ダニッシュ・ダイナマイト’18", rank: '銀', policy: 'ムービング', formationId: '451b_danish', buffs: [{ name: 'コンタクト', val: 80 }, { name: '走力', val: 80 }, { name: 'キープ力', val: 80 }] },
+      { id: 'monaco04', name: "レ・ルージュ・エ・ブラン’04", rank: '銀', policy: 'ムービング', formationId: '433b_monaco', buffs: [{ name: '決定力', val: 80 }, { name: 'キープ力', val: 80 }, { name: 'パスカット', val: 80 }] },
+      { id: 'amarela02', name: "ヴァルデ・アマレーラ’02", rank: '銀', policy: 'ムービング', formationId: '532a_amarela', buffs: [{ name: 'パスカット', val: 60 }, { name: 'ジャンプ', val: 60 }, { name: 'コンタクト', val: 60 }] },
+      { id: 'danishDynamite86', name: "ダニッシュ・ダイナマイト’86", rank: '銀', policy: 'ムービング', formationId: '352b_danish86', buffs: [{ name: '突破力', val: 60 }, { name: 'セービング', val: 60 }, { name: 'ジャンプ', val: 60 }] },
+      { id: 'amarillo06', name: "サブマリーノ・アマリーリョ’06", rank: '銀', policy: 'ムービング', formationId: '442a_amarillo', buffs: [{ name: '走力', val: 80 }, { name: 'パスカット', val: 80 }, { name: 'ジャンプ', val: 80 }] },
+      { id: 'losMillonarios86', name: "ロス・ミリョナリオス’86", rank: '銀', policy: 'ムービング', formationId: '442d_losMillonarios', buffs: [{ name: 'コンタクト', val: 80 }, { name: '走力', val: 80 }, { name: '冷静さ', val: 80 }] },
+      { id: 'hinomaru93', name: "ヒノマルスタイル’93", rank: '銀', policy: 'カウンター', formationId: '433b_hinomaru', buffs: [{ name: 'ロングパス', val: 80 }, { name: '突破力', val: 80 }, { name: '走力', val: 80 }] },
+      { id: 'schwarzGelben16', name: "シュヴァルツ・ゲルベン’16", rank: '銀', policy: 'カウンター', formationId: '451a_schwarzGelben', buffs: [{ name: 'コンタクト', val: 80 }, { name: '走力', val: 80 }, { name: 'キック精度', val: 80 }] },
+      { id: 'hinomaru68', name: "ヒノマルスタイル’68", rank: '銀', policy: 'カウンター', formationId: '343c_hinomaru68', buffs: [{ name: '決定力', val: 80 }, { name: 'ショートパス', val: 80 }, { name: 'キック精度', val: 80 }] },
+      { id: 'blanquiroja82', name: "ラ・ブランキロハ’82", rank: '銀', policy: 'カウンター', formationId: '442e_blanquiroja', buffs: [{ name: '突破力', val: 80 }, { name: 'セービング', val: 80 }, { name: 'コンタクト', val: 80 }] },
+      { id: 'losPuros01', name: "ロス・プロス’01", rank: '銀', policy: 'カウンター', formationId: '442a_losPuros', buffs: [{ name: '突破力', val: 60 }, { name: 'キープ力', val: 60 }, { name: 'ジャンプ', val: 60 }] },
+      { id: 'greenFalcons98', name: "グリーン・ファルコンズ’98", rank: '銀', policy: 'カウンター', formationId: '451b_greenFalcons', buffs: [{ name: 'ロングパス', val: 80 }, { name: '冷静さ', val: 80 }, { name: '敏捷性', val: 80 }] },
+      { id: 'orlovi24', name: "オルロヴィ’24", rank: '銀', policy: 'カウンター', formationId: '442b_orlovi', buffs: [{ name: '冷静さ', val: 80 }, { name: 'コンタクト', val: 80 }, { name: 'ジャンプ', val: 80 }] },
+      { id: 'laRoja02', name: "ラ・ロハ’02", rank: '銀', policy: 'ポゼッション', formationId: '442b_laRoja02', buffs: [{ name: 'コンタクト', val: 80 }, { name: 'ジャンプ', val: 80 }, { name: 'パスカット', val: 80 }] },
+      { id: 'elLeon70', name: "エル・レオン’70", rank: '銀', policy: 'ポゼッション', formationId: '343c_elLeon70', buffs: [{ name: 'ロングパス', val: 80 }, { name: 'コンタクト', val: 80 }, { name: 'キープ力', val: 80 }] },
+      { id: 'ulcitca03', name: "ウルチカ’03", rank: '銀', policy: 'ポゼッション', formationId: '451a_ulcitca03', buffs: [{ name: '決定力', val: 80 }, { name: 'ロングパス', val: 80 }, { name: 'キープ力', val: 80 }] },
+      { id: 'diablesRouges18', name: "ディアブル・ルージュ’18", rank: '銀', policy: 'ポゼッション', formationId: '433a_diablesRouges18', buffs: [{ name: 'キープ力', val: 60 }, { name: 'ジャンプ', val: 60 }, { name: 'スタミナ', val: 60 }] },
+      { id: 'taegukWarriors02', name: "太極戦士’02", rank: '銀', policy: 'ポゼッション', formationId: '343b_taegukWarriors02', buffs: [{ name: 'キック精度', val: 60 }, { name: 'キープ力', val: 60 }, { name: 'ジャンプ', val: 60 }] },
+      { id: 'dieAdler24', name: "ディー・アドラー’24", rank: '銀', policy: 'ポゼッション', formationId: '541a_dieAdler24', buffs: [{ name: 'ロングパス', val: 80 }, { name: 'コンタクト', val: 80 }, { name: '走力', val: 80 }] },
+      { id: 'viola99', name: "ヴィオラ’99", rank: '銀', policy: 'ポゼッション', formationId: '451b_viola99', buffs: [{ name: 'ボールタッチ', val: 80 }, { name: '走力', val: 80 }, { name: 'ジャンプ', val: 80 }] }
+    ];
+
+    const FORMATIONS = [
+      { id: '343c_selecao', name: '3-4-3C (セレソン’70)', comboId: 'selecao70', slots: [{ id: 1, pos: 'GK', label: 'GK', top: '88%', left: '50%' }, { id: 2, pos: 'CB', label: 'LCB', top: '72%', left: '26%' }, { id: 3, pos: 'CB', label: 'CB', top: '74%', left: '50%' }, { id: 4, pos: 'CB', label: 'RCB', top: '72%', left: '74%', requiredStyle: 'スプリントCB', minLevel: 2 }, { id: 5, pos: 'DM', label: 'LDM', top: '54%', left: '38%' }, { id: 6, pos: 'DM', label: 'RDM', top: '54%', left: '62%', requiredStyle: 'ハードマーカー', minLevel: 2 }, { id: 7, pos: 'AM', label: 'LAM', top: '35%', left: '32%' }, { id: 8, pos: 'AM', label: 'RAM', top: '35%', left: '68%' }, { id: 9, pos: 'LW', label: 'LW', top: '18%', left: '20%', requiredStyle: 'サイドアタッカーLW', minLevel: 3 }, { id: 10, pos: 'CF', label: 'CF', top: '14%', left: '50%', requiredStyle: 'ラインブレーカー', minLevel: 3 }, { id: 11, pos: 'RW', label: 'RW', top: '18%', left: '80%' }] },
+      { id: '343c_golden', name: "3-4-3C (ゴーデンゾーネン'94)", comboId: 'goldenZonen94', slots: [{ id: 1, pos: 'GK', label: 'GK', top: '88%', left: '50%' }, { id: 2, pos: 'CB', label: 'LCB', top: '72%', left: '26%' }, { id: 3, pos: 'CB', label: 'CB', top: '74%', left: '50%', requiredStyle: 'ストッパー', minLevel: 2 }, { id: 4, pos: 'CB', label: 'RCB', top: '72%', left: '74%' }, { id: 5, pos: 'DM', label: 'LDM', top: '54%', left: '38%', requiredStyle: 'ハードマーカー', minLevel: 2 }, { id: 6, pos: 'DM', label: 'RDM', top: '54%', left: '62%', requiredStyle: 'セントラルDM', minLevel: 3 }, { id: 7, pos: 'AM', label: 'LAM', top: '35%', left: '32%' }, { id: 8, pos: 'AM', label: 'RAM', top: '35%', left: '68%' }, { id: 9, pos: 'LW', label: 'LW', top: '18%', left: '20%' }, { id: 10, pos: 'CF', label: 'CF', top: '14%', left: '50%' }, { id: 11, pos: 'RW', label: 'RW', top: '18%', left: '80%' }] },
+      { id: '442a_quinas', name: "4-4-2A (セレソン・ダス・キナス'16)", comboId: 'selecaoDasQuinas16', slots: [{ id: 1, pos: 'GK', label: 'GK', top: '88%', left: '50%' }, { id: 2, pos: 'LB', label: 'LB', top: '70%', left: '16%', requiredStyle: '攻撃的LB', minLevel: 2 }, { id: 3, pos: 'CB', label: 'LCB', top: '73%', left: '38%' }, { id: 4, pos: 'CB', label: 'RCB', top: '73%', left: '62%' }, { id: 5, pos: 'RB', label: 'RB', top: '70%', left: '84%' }, { id: 6, pos: 'DM', label: 'DM', top: '56%', left: '50%' }, { id: 7, pos: 'LM', label: 'LM', top: '40%', left: '20%', requiredStyle: 'サイドアタッカーLM', minLevel: 2 }, { id: 8, pos: 'AM', label: 'AM', top: '34%', left: '50%' }, { id: 9, pos: 'RM', label: 'RM', top: '40%', left: '80%' }, { id: 10, pos: 'CF', label: 'LCF', top: '16%', left: '36%' }, { id: 11, pos: 'CF', label: 'RCF', top: '16%', left: '64%', requiredStyle: 'ストライカー', minLevel: 3 }] },
+      { id: '442e_alvinegro', name: "4-4-2E (アルヴィネグロ・プライアーノ’11)", comboId: 'alvinegroPraiano', slots: [{ id: 1, pos: 'GK', label: 'GK', top: '88%', left: '50%' }, { id: 2, pos: 'LB', label: 'LB', top: '70%', left: '16%' }, { id: 3, pos: 'CB', label: 'LCB', top: '73%', left: '38%' }, { id: 4, pos: 'CB', label: 'RCB', top: '73%', left: '62%' }, { id: 5, pos: 'RB', label: 'RB', top: '70%', left: '84%', requiredStyle: '攻撃的RB', minLevel: 2 }, { id: 6, pos: 'DM', label: 'DM', top: '56%', left: '50%' }, { id: 7, pos: 'AM', label: 'LAM', top: '38%', left: '24%' }, { id: 8, pos: 'AM', label: 'AM', top: '34%', left: '50%', requiredStyle: 'パサーAM', minLevel: 2 }, { id: 9, pos: 'AM', label: 'RAM', top: '38%', left: '76%' }, { id: 10, pos: 'CF', label: 'LCF', top: '16%', left: '36%' }, { id: 11, pos: 'CF', label: 'RCF', top: '16%', left: '64%', requiredStyle: 'ラインブレーカー', minLevel: 3 }] },
+      { id: '433b_encarnados', name: "4-3-3B (エンカルナードス’23)", comboId: 'encarnados23', slots: [{ id: 1, pos: 'GK', label: 'GK', top: '88%', left: '50%' }, { id: 2, pos: 'LB', label: 'LB', top: '70%', left: '16%' }, { id: 3, pos: 'CB', label: 'LCB', top: '73%', left: '38%' }, { id: 4, pos: 'CB', label: 'RCB', top: '73%', left: '62%', requiredStyle: '組立CB', minLevel: 2 }, { id: 5, pos: 'RB', label: 'RB', top: '70%', left: '84%' }, { id: 6, pos: 'DM', label: 'LDM', top: '54%', left: '36%', requiredStyle: 'セントラルDM', minLevel: 2 }, { id: 7, pos: 'DM', label: 'RDM', top: '54%', left: '64%' }, { id: 8, pos: 'AM', label: 'AM', top: '34%', left: '50%', requiredStyle: 'アタッカー', minLevel: 3 }, { id: 9, pos: 'LW', label: 'LW', top: '18%', left: '20%' }, { id: 10, pos: 'CF', label: 'CF', top: '14%', left: '50%' }, { id: 11, pos: 'RW', label: 'RW', top: '18%', left: '80%' }] },
+      { id: '433b_nerazzurro', name: "4-3-3B (ネラッズーロ’10)", comboId: 'nerazzurro10', slots: [{ id: 1, pos: 'GK', label: 'GK', top: '88%', left: '50%' }, { id: 2, pos: 'LB', label: 'LB', top: '70%', left: '16%' }, { id: 3, pos: 'CB', label: 'LCB', top: '73%', left: '38%' }, { id: 4, pos: 'CB', label: 'RCB', top: '73%', left: '62%' }, { id: 5, pos: 'RB', label: 'RB', top: '70%', left: '84%' }, { id: 6, pos: 'DM', label: 'LDM', top: '54%', left: '36%' }, { id: 7, pos: 'DM', label: 'RDM', top: '54%', left: '64%', requiredStyle: 'セントラルDM', minLevel: 2 }, { id: 8, pos: 'AM', label: 'AM', top: '34%', left: '50%' }, { id: 9, pos: 'LW', label: 'LW', top: '18%', left: '20%', requiredStyle: 'サイドアタッカーLW', minLevel: 2 }, { id: 10, pos: 'CF', label: 'CF', top: '14%', left: '50%' }, { id: 11, pos: 'RW', label: 'RW', top: '18%', left: '80%', requiredStyle: 'ワイドストライカーRW', minLevel: 3 }] },
+      { id: '442c_canaria', name: "4-4-2C (カナリア軍団’06)", comboId: 'canaria06', slots: [{ id: 1, pos: 'GK', label: 'GK', top: '88%', left: '50%' }, { id: 2, pos: 'LB', label: 'LB', top: '70%', left: '16%' }, { id: 3, pos: 'CB', label: 'LCB', top: '73%', left: '38%' }, { id: 4, pos: 'CB', label: 'RCB', top: '73%', left: '62%', requiredStyle: 'ストッパー', minLevel: 2 }, { id: 5, pos: 'RB', label: 'RB', top: '70%', left: '84%' }, { id: 6, pos: 'DM', label: 'LDM', top: '54%', left: '36%', requiredStyle: 'ハードマーカー', minLevel: 3 }, { id: 7, pos: 'DM', label: 'RDM', top: '54%', left: '64%' }, { id: 8, pos: 'AM', label: 'LAM', top: '35%', left: '32%' }, { id: 9, pos: 'AM', label: 'RAM', top: '35%', left: '68%' }, { id: 10, pos: 'CF', label: 'LCF', top: '16%', left: '36%' }, { id: 11, pos: 'CF', label: 'RCF', top: '16%', left: '64%', requiredStyle: 'ストライカー', minLevel: 2 }] },
+      { id: '343a_albiceleste', name: "3-4-3A (アルビセレステ’01)", comboId: 'albiceleste01', slots: [{ id: 1, pos: 'GK', label: 'GK', top: '88%', left: '50%' }, { id: 2, pos: 'CB', label: 'LCB', top: '72%', left: '26%', requiredStyle: '組立CB', minLevel: 2 }, { id: 3, pos: 'CB', label: 'CB', top: '74%', left: '50%' }, { id: 4, pos: 'CB', label: 'RCB', top: '72%', left: '74%' }, { id: 5, pos: 'DM', label: 'DM', top: '54%', left: '50%' }, { id: 6, pos: 'LM', label: 'LM', top: '38%', left: '20%', requiredStyle: 'サイドアタッカーLM', minLevel: 3 }, { id: 7, pos: 'AM', label: 'AM', top: '34%', left: '50%' }, { id: 8, pos: 'RM', label: 'RM', top: '38%', left: '80%' }, { id: 9, pos: 'LW', label: 'LW', top: '18%', left: '20%' }, { id: 10, pos: 'CF', label: 'CF', top: '14%', left: '50%', requiredStyle: 'ストライカー', minLevel: 2 }, { id: 11, pos: 'RW', label: 'RW', top: '18%', left: '80%' }] },
+      { id: '442e_soberano', name: "4-4-2E (ソベラーノ’94)", comboId: 'soberano94', slots: [{ id: 1, pos: 'GK', label: 'GK', top: '88%', left: '50%' }, { id: 2, pos: 'LB', label: 'LB', top: '70%', left: '16%' }, { id: 3, pos: 'CB', label: 'LCB', top: '73%', left: '38%' }, { id: 4, pos: 'CB', label: 'RCB', top: '73%', left: '62%' }, { id: 5, pos: 'RB', label: 'RB', top: '70%', left: '84%' }, { id: 6, pos: 'DM', label: 'DM', top: '56%', left: '50%' }, { id: 7, pos: 'AM', label: 'LAM', top: '38%', left: '24%', requiredStyle: 'パサーAM', minLevel: 2 }, { id: 8, pos: 'AM', label: 'AM', top: '34%', left: '50%' }, { id: 9, pos: 'AM', label: 'RAM', top: '38%', left: '76%', requiredStyle: 'アタッカー', minLevel: 2 }, { id: 10, pos: 'CF', label: 'LCF', top: '16%', left: '36%', requiredStyle: 'ストライカー', minLevel: 3 }, { id: 11, pos: 'CF', label: 'RCF', top: '16%', left: '64%' }] },
+      { id: '433a_blauGrana', name: "4-3-3A (ブラウ・グラーナ’15)", comboId: 'blauGrana15', slots: [{ id: 1, pos: 'GK', label: 'GK', top: '88%', left: '50%' }, { id: 2, pos: 'LB', label: 'LB', top: '70%', left: '16%' }, { id: 3, pos: 'CB', label: 'LCB', top: '73%', left: '38%' }, { id: 4, pos: 'CB', label: 'RCB', top: '73%', left: '62%', requiredStyle: '組立CB', minLevel: 2 }, { id: 5, pos: 'RB', label: 'RB', top: '70%', left: '84%' }, { id: 6, pos: 'DM', label: 'DM', top: '54%', left: '50%' }, { id: 7, pos: 'AM', label: 'LAM', top: '35%', left: '32%' }, { id: 8, pos: 'AM', label: 'RAM', top: '35%', left: '68%', requiredStyle: 'セントラルAM', minLevel: 2 }, { id: 9, pos: 'LW', label: 'LW', top: '18%', left: '20%' }, { id: 10, pos: 'CF', label: 'CF', top: '14%', left: '50%', requiredStyle: 'ストライカー', minLevel: 3 }, { id: 11, pos: 'RW', label: 'RW', top: '18%', left: '80%' }] },
+      { id: '442d_losCafeteros', name: "4-4-2D (ロス・カフェテロス’94)", comboId: 'losCafeteros94', slots: [{ id: 1, pos: 'GK', label: 'GK', top: '88%', left: '50%' }, { id: 2, pos: 'LB', label: 'LB', top: '70%', left: '16%' }, { id: 3, pos: 'CB', label: 'LCB', top: '73%', left: '38%', requiredStyle: 'ストッパー', minLevel: 2 }, { id: 4, pos: 'CB', label: 'RCB', top: '73%', left: '62%' }, { id: 5, pos: 'RB', label: 'RB', top: '70%', left: '84%' }, { id: 6, pos: 'DM', label: 'LDM', top: '54%', left: '26%', requiredStyle: 'セントラルDM', minLevel: 3 }, { id: 7, pos: 'DM', label: 'DM', top: '56%', left: '50%' }, { id: 8, pos: 'DM', label: 'RDM', top: '54%', left: '74%' }, { id: 9, pos: 'AM', label: 'AM', top: '34%', left: '50%' }, { id: 10, pos: 'CF', label: 'LCF', top: '16%', left: '36%' }, { id: 11, pos: 'CF', label: 'RCF', top: '16%', left: '64%', requiredStyle: 'ストライカー', minLevel: 2 }] },
+      { id: '433b_laRoja', name: "4-3-3B (ラ・ロハ’24)", comboId: 'laRoja24', slots: [{ id: 1, pos: 'GK', label: 'GK', top: '88%', left: '50%' }, { id: 2, pos: 'LB', label: 'LB', top: '70%', left: '16%' }, { id: 3, pos: 'CB', label: 'LCB', top: '73%', left: '38%' }, { id: 4, pos: 'CB', label: 'RCB', top: '73%', left: '62%' }, { id: 5, pos: 'RB', label: 'RB', top: '70%', left: '84%', requiredStyle: '攻撃的RB', minLevel: 2 }, { id: 6, pos: 'DM', label: 'LDM', top: '54%', left: '36%' }, { id: 7, pos: 'DM', label: 'RDM', top: '54%', left: '64%', requiredStyle: 'パサーDM', minLevel: 2 }, { id: 8, pos: 'AM', label: 'AM', top: '34%', left: '50%' }, { id: 9, pos: 'LW', label: 'LW', top: '18%', left: '20%' }, { id: 10, pos: 'CF', label: 'CF', top: '14%', left: '50%' }, { id: 11, pos: 'RW', label: 'RW', top: '18%', left: '80%', requiredStyle: 'ドリブラーRW', minLevel: 3 }] },
+      { id: '352b_laDea', name: "3-5-2B (ラ・デア’22)", comboId: 'laDea22', slots: [{ id: 1, pos: 'GK', label: 'GK', top: '88%', left: '50%' }, { id: 2, pos: 'CB', label: 'LCB', top: '72%', left: '26%' }, { id: 3, pos: 'CB', label: 'CB', top: '74%', left: '50%', requiredStyle: 'ストッパー', minLevel: 2 }, { id: 4, pos: 'CB', label: 'RCB', top: '72%', left: '74%' }, { id: 5, pos: 'DM', label: 'LDM', top: '56%', left: '38%' }, { id: 6, pos: 'DM', label: 'RDM', top: '56%', left: '62%' }, { id: 7, pos: 'LM', label: 'LM', top: '40%', left: '18%' }, { id: 8, pos: 'AM', label: 'AM', top: '34%', left: '50%' }, { id: 9, pos: 'RM', label: 'RM', top: '40%', left: '82%', requiredStyle: 'ドリブラーRM', minLevel: 2 }, { id: 10, pos: 'CF', label: 'LCF', top: '16%', left: '36%', requiredStyle: 'ラインブレーカー', minLevel: 3 }, { id: 11, pos: 'CF', label: 'RCF', top: '16%', left: '64%' }] },
+      { id: '361a_blueImpact', name: "3-6-1A (ブルー・インパクト’26)", comboId: 'blueImpact26', slots: [{ id: 1, pos: 'GK', label: 'GK', top: '88%', left: '50%' }, { id: 2, pos: 'CB', label: 'LCB', top: '72%', left: '26%' }, { id: 3, pos: 'CB', label: 'CB', top: '74%', left: '50%' }, { id: 4, pos: 'CB', label: 'RCB', top: '72%', left: '74%' }, { id: 5, pos: 'DM', label: 'LDM', top: '56%', left: '38%', requiredStyle: 'パサーDM', minLevel: 2 }, { id: 6, pos: 'DM', label: 'RDM', top: '56%', left: '62%' }, { id: 7, pos: 'LM', label: 'LM', top: '40%', left: '18%', requiredStyle: 'ドリブラーLM', minLevel: 3 }, { id: 8, pos: 'AM', label: 'LAM', top: '34%', left: '34%' }, { id: 9, pos: 'AM', label: 'RAM', top: '34%', left: '66%' }, { id: 10, pos: 'RM', label: 'RM', top: '40%', left: '82%', requiredStyle: 'ドリブラーRM', minLevel: 2 }, { id: 11, pos: 'CF', label: 'CF', top: '14%', left: '50%' }] },
+      { id: '343c_euskaldunak', name: "3-4-3C (エウスカルドゥナク’12)", comboId: 'euskaldunak12', slots: [{ id: 1, pos: 'GK', label: 'GK', top: '88%', left: '50%' }, { id: 2, pos: 'CB', label: 'LCB', top: '72%', left: '26%' }, { id: 3, pos: 'CB', label: 'CB', top: '74%', left: '50%', requiredStyle: 'ストッパー', minLevel: 2 }, { id: 4, pos: 'CB', label: 'RCB', top: '72%', left: '74%' }, { id: 5, pos: 'DM', label: 'LDM', top: '54%', left: '38%' }, { id: 6, pos: 'DM', label: 'RDM', top: '54%', left: '62%' }, { id: 7, pos: 'AM', label: 'LAM', top: '35%', left: '32%', requiredStyle: 'アタッカー', minLevel: 3 }, { id: 8, pos: 'AM', label: 'RAM', top: '35%', left: '68%' }, { id: 9, pos: 'LW', label: 'LW', top: '18%', left: '20%' }, { id: 10, pos: 'CF', label: 'CF', top: '14%', left: '50%', requiredStyle: 'ストライカー', minLevel: 2 }, { id: 11, pos: 'RW', label: 'RW', top: '18%', left: '80%' }] },
+      { id: '433b_river', name: "4-3-3B (リーベル’18)", comboId: 'river18', slots: [{ id: 1, pos: 'GK', label: 'GK', top: '88%', left: '50%' }, { id: 2, pos: 'LB', label: 'LB', top: '70%', left: '16%' }, { id: 3, pos: 'CB', label: 'LCB', top: '73%', left: '38%' }, { id: 4, pos: 'CB', label: 'RCB', top: '73%', left: '62%' }, { id: 5, pos: 'RB', label: 'RB', top: '70%', left: '84%' }, { id: 6, pos: 'DM', label: 'LDM', top: '54%', left: '36%', requiredStyle: 'ハードマーカー', minLevel: 2 }, { id: 7, pos: 'DM', label: 'RDM', top: '54%', left: '64%' }, { id: 8, pos: 'AM', label: 'AM', top: '34%', left: '50%' }, { id: 9, pos: 'LW', label: 'LW', top: '18%', left: '20%', requiredStyle: 'ドリブラーLW', minLevel: 3 }, { id: 10, pos: 'CF', label: 'CF', top: '14%', left: '50%' }, { id: 11, pos: 'RW', label: 'RW', top: '18%', left: '80%', requiredStyle: 'ドリブラーRW', minLevel: 2 }] },
+      { id: '343b_diavolo', name: "3-4-3B (ディアボロ・ディ・ミラノ’99)", comboId: 'diavolo99', slots: [{ id: 1, pos: 'GK', label: 'GK', top: '88%', left: '50%' }, { id: 2, pos: 'CB', label: 'LCB', top: '72%', left: '26%' }, { id: 3, pos: 'CB', label: 'CB', top: '74%', left: '50%' }, { id: 4, pos: 'CB', label: 'RCB', top: '72%', left: '74%', requiredStyle: '組立CB', minLevel: 2 }, { id: 5, pos: 'DM', label: 'LDM', top: '56%', left: '38%' }, { id: 6, pos: 'DM', label: 'RDM', top: '56%', left: '62%', requiredStyle: 'セントラルDM', minLevel: 3 }, { id: 7, pos: 'LM', label: 'LM', top: '38%', left: '18%' }, { id: 8, pos: 'RM', label: 'RM', top: '38%', left: '82%' }, { id: 9, pos: 'LW', label: 'LW', top: '18%', left: '20%', requiredStyle: 'ドリブラーLW', minLevel: 2 }, { id: 10, pos: 'CF', label: 'CF', top: '14%', left: '50%' }, { id: 11, pos: 'RW', label: 'RW', top: '18%', left: '80%' }] },
+      { id: '442d_lesBleus', name: "4-4-2D (レ・ブルー’98)", comboId: 'lesBleus98', slots: [{ id: 1, pos: 'GK', label: 'GK', top: '88%', left: '50%' }, { id: 2, pos: 'LB', label: 'LB', top: '70%', left: '16%', requiredStyle: '守備的LB', minLevel: 2 }, { id: 3, pos: 'CB', label: 'LCB', top: '73%', left: '38%' }, { id: 4, pos: 'CB', label: 'RCB', top: '73%', left: '62%' }, { id: 5, pos: 'RB', label: 'RB', top: '70%', left: '84%' }, { id: 6, pos: 'DM', label: 'LDM', top: '54%', left: '26%' }, { id: 7, pos: 'DM', label: 'DM', top: '56%', left: '50%' }, { id: 8, pos: 'DM', label: 'RDM', top: '54%', left: '74%' }, { id: 9, pos: 'AM', label: 'AM', top: '34%', left: '50%', requiredStyle: 'セントラルAM', minLevel: 2 }, { id: 10, pos: 'CF', label: 'LCF', top: '16%', left: '36%' }, { id: 11, pos: 'CF', label: 'RCF', top: '16%', left: '64%', requiredStyle: 'ストライカー', minLevel: 3 }] },
+      { id: '352b_azzurri', name: "3-5-2B (アズーリ’14)", comboId: 'azzurri14', slots: [{ id: 1, pos: 'GK', label: 'GK', top: '88%', left: '50%', requiredStyle: 'オーソドックスGK', minLevel: 2 }, { id: 2, pos: 'CB', label: 'LCB', top: '72%', left: '26%' }, { id: 3, pos: 'CB', label: 'CB', top: '74%', left: '50%' }, { id: 4, pos: 'CB', label: 'RCB', top: '72%', left: '74%' }, { id: 5, pos: 'DM', label: 'LDM', top: '56%', left: '38%', requiredStyle: 'セントラルDM', minLevel: 2 }, { id: 6, pos: 'DM', label: 'RDM', top: '56%', left: '62%' }, { id: 7, pos: 'LM', label: 'LM', top: '40%', left: '18%' }, { id: 8, pos: 'AM', label: 'AM', top: '34%', left: '50%', requiredStyle: 'アタッカー', minLevel: 2 }, { id: 9, pos: 'RM', label: 'RM', top: '40%', left: '82%' }, { id: 10, pos: 'CF', label: 'LCF', top: '16%', left: '36%' }, { id: 11, pos: 'CF', label: 'RCF', top: '16%', left: '64%' }] },
+      { id: '343b_friulani', name: "3-4-3B (イ・フリウラーニ’98)", comboId: 'friulani98', slots: [{ id: 1, pos: 'GK', label: 'GK', top: '88%', left: '50%', requiredStyle: 'オーソドックスGK', minLevel: 2 }, { id: 2, pos: 'CB', label: 'LCB', top: '72%', left: '26%', requiredStyle: '組立CB', minLevel: 2 }, { id: 3, pos: 'CB', label: 'CB', top: '74%', left: '50%' }, { id: 4, pos: 'CB', label: 'RCB', top: '72%', left: '74%' }, { id: 5, pos: 'DM', label: 'LDM', top: '56%', left: '38%' }, { id: 6, pos: 'DM', label: 'RDM', top: '56%', left: '62%' }, { id: 7, pos: 'LM', label: 'LM', top: '38%', left: '18%', requiredStyle: 'サイドアタッカーLM', minLevel: 2 }, { id: 8, pos: 'RM', label: 'RM', top: '38%', left: '82%' }, { id: 9, pos: 'LW', label: 'LW', top: '18%', left: '20%' }, { id: 10, pos: 'CF', label: 'CF', top: '14%', left: '50%' }, { id: 11, pos: 'RW', label: 'RW', top: '18%', left: '80%' }] },
+      { id: '532b_crociati', name: "5-3-2B (クロチャーティ’99)", comboId: 'crociati99', slots: [{ id: 1, pos: 'GK', label: 'GK', top: '88%', left: '50%' }, { id: 2, pos: 'LB', label: 'LB', top: '68%', left: '14%' }, { id: 3, pos: 'CB', label: 'LCB', top: '74%', left: '32%' }, { id: 4, pos: 'CB', label: 'CB', top: '76%', left: '50%' }, { id: 5, pos: 'CB', label: 'RCB', top: '74%', left: '68%' }, { id: 6, pos: 'RB', label: 'RB', top: '68%', left: '86%' }, { id: 7, pos: 'DM', label: 'LDM', top: '52%', left: '36%', requiredStyle: 'セントラルDM', minLevel: 2 }, { id: 8, pos: 'DM', label: 'RDM', top: '52%', left: '64%' }, { id: 9, pos: 'AM', label: 'AM', top: '34%', left: '50%', requiredStyle: 'アタッカー', minLevel: 2 }, { id: 10, pos: 'CF', label: 'LCF', top: '16%', left: '36%' }, { id: 11, pos: 'CF', label: 'RCF', top: '16%', left: '64%', requiredStyle: 'ストライカー', minLevel: 2 }] },
+      { id: '541a_hollywood', name: "5-4-1A (FCハリウッド’01)", comboId: 'hollywood01', slots: [{ id: 1, pos: 'GK', label: 'GK', top: '88%', left: '50%' }, { id: 2, pos: 'LB', label: 'LB', top: '68%', left: '14%' }, { id: 3, pos: 'CB', label: 'LCB', top: '74%', left: '32%' }, { id: 4, pos: 'CB', label: 'CB', top: '76%', left: '50%' }, { id: 5, pos: 'CB', label: 'RCB', top: '74%', left: '68%' }, { id: 6, pos: 'RB', label: 'RB', top: '68%', left: '86%', requiredStyle: '攻撃的RB', minLevel: 2 }, { id: 7, pos: 'DM', label: 'LDM', top: '54%', left: '36%' }, { id: 8, pos: 'DM', label: 'RDM', top: '54%', left: '64%' }, { id: 9, pos: 'AM', label: 'LAM', top: '35%', left: '32%' }, { id: 10, pos: 'AM', label: 'RAM', top: '35%', left: '68%' }, { id: 11, pos: 'CF', label: 'CF', top: '14%', left: '50%', requiredStyle: 'ラインブレーカー', minLevel: 2 }] },
+      { id: '451b_azzurri', name: "4-5-1B (アズーリ’06)", comboId: 'azzurri06', slots: [{ id: 1, pos: 'GK', label: 'GK', top: '88%', left: '50%' }, { id: 2, pos: 'LB', label: 'LB', top: '70%', left: '16%' }, { id: 3, pos: 'CB', label: 'LCB', top: '73%', left: '38%' }, { id: 4, pos: 'CB', label: 'RCB', top: '73%', left: '62%', requiredStyle: '組立CB', minLevel: 2 }, { id: 5, pos: 'RB', label: 'RB', top: '70%', left: '84%' }, { id: 6, pos: 'DM', label: 'LDM', top: '54%', left: '36%' }, { id: 7, pos: 'DM', label: 'RDM', top: '54%', left: '64%' }, { id: 8, pos: 'LM', label: 'LM', top: '38%', left: '18%', requiredStyle: 'ドリブラーLM', minLevel: 2 }, { id: 9, pos: 'AM', label: 'AM', top: '34%', left: '50%' }, { id: 10, pos: 'RM', label: 'RM', top: '38%', left: '82%' }, { id: 11, pos: 'CF', label: 'CF', top: '14%', left: '50%' }] },
+      { id: '523a_gulag', name: "5-2-3A (ブロ・グルト’94)", comboId: 'gulag94', slots: [{ id: 1, pos: 'GK', label: 'GK', top: '88%', left: '50%' }, { id: 2, pos: 'LB', label: 'LB', top: '68%', left: '14%', requiredStyle: '攻撃的LB', minLevel: 2 }, { id: 3, pos: 'CB', label: 'LCB', top: '74%', left: '32%' }, { id: 4, pos: 'CB', label: 'CB', top: '76%', left: '50%', requiredStyle: 'ストッパー', minLevel: 2 }, { id: 5, pos: 'CB', label: 'RCB', top: '74%', left: '68%' }, { id: 6, pos: 'RB', label: 'RB', top: '68%', left: '86%' }, { id: 7, pos: 'DM', label: 'LDM', top: '50%', left: '38%' }, { id: 8, pos: 'DM', label: 'RDM', top: '50%', left: '62%' }, { id: 9, pos: 'LW', label: 'LW', top: '18%', left: '20%' }, { id: 10, pos: 'CF', label: 'CF', top: '14%', left: '50%' }, { id: 11, pos: 'RW', label: 'RW', top: '18%', left: '80%', requiredStyle: 'ドリブラーRW', minLevel: 2 }] },
+      { id: '442c_grifoni', name: "4-4-2C (グリフォーニ’99)", comboId: 'grifoni99', slots: [{ id: 1, pos: 'GK', label: 'GK', top: '88%', left: '50%' }, { id: 2, pos: 'LB', label: 'LB', top: '70%', left: '16%' }, { id: 3, pos: 'CB', label: 'LCB', top: '73%', left: '38%' }, { id: 4, pos: 'CB', label: 'RCB', top: '73%', left: '62%' }, { id: 5, pos: 'RB', label: 'RB', top: '70%', left: '84%', requiredStyle: '守備的RB', minLevel: 2 }, { id: 6, pos: 'DM', label: 'LDM', top: '54%', left: '36%' }, { id: 7, pos: 'DM', label: 'RDM', top: '54%', left: '64%' }, { id: 8, pos: 'AM', label: 'LAM', top: '35%', left: '32%', requiredStyle: 'アタッカー', minLevel: 2 }, { id: 9, pos: 'AM', label: 'RAM', top: '35%', left: '68%' }, { id: 10, pos: 'CF', label: 'LCF', top: '16%', left: '36%' }, { id: 11, pos: 'CF', label: 'RCF', top: '16%', left: '64%', requiredStyle: 'ポストプレーヤー', minLevel: 2 }] },
+      { id: '361b_blueGaru', name: "3-6-1B (ブルー・ガル’22)", comboId: 'blueGaru22', slots: [{ id: 1, pos: 'GK', label: 'GK', top: '88%', left: '50%' }, { id: 2, pos: 'CB', label: 'LCB', top: '72%', left: '26%', requiredStyle: 'ストッパー', minLevel: 2 }, { id: 3, pos: 'CB', label: 'CB', top: '74%', left: '50%' }, { id: 4, pos: 'CB', label: 'RCB', top: '72%', left: '74%', requiredStyle: '組立CB', minLevel: 2 }, { id: 5, pos: 'DM', label: 'LDM', top: '56%', left: '26%' }, { id: 6, pos: 'DM', label: 'DM', top: '56%', left: '50%', requiredStyle: 'セントラルDM', minLevel: 2 }, { id: 7, pos: 'DM', label: 'RDM', top: '56%', left: '74%' }, { id: 8, pos: 'LM', label: 'LM', top: '38%', left: '18%' }, { id: 9, pos: 'AM', label: 'AM', top: '34%', left: '50%' }, { id: 10, pos: 'RM', label: 'RM', top: '38%', left: '82%' }, { id: 11, pos: 'CF', label: 'CF', top: '14%', left: '50%' }] },
+      { id: '451b_danish', name: "4-5-1B (ダニッシュ・ダイナマイト’18)", comboId: 'danishDynamite18', slots: [{ id: 1, pos: 'GK', label: 'GK', top: '88%', left: '50%' }, { id: 2, pos: 'LB', label: 'LB', top: '70%', left: '16%' }, { id: 3, pos: 'CB', label: 'LCB', top: '73%', left: '38%', requiredStyle: 'ストッパー', minLevel: 2 }, { id: 4, pos: 'CB', label: 'RCB', top: '73%', left: '62%' }, { id: 5, pos: 'RB', label: 'RB', top: '70%', left: '84%' }, { id: 6, pos: 'DM', label: 'LDM', top: '54%', left: '36%' }, { id: 7, pos: 'DM', label: 'RDM', top: '54%', left: '64%' }, { id: 8, pos: 'LM', label: 'LM', top: '38%', left: '18%' }, { id: 9, pos: 'AM', label: 'AM', top: '34%', left: '50%', requiredStyle: 'パサーAM', minLevel: 2 }, { id: 10, pos: 'RM', label: 'RM', top: '38%', left: '82%' }, { id: 11, pos: 'CF', label: 'CF', top: '14%', left: '50%', requiredStyle: 'ストライカー', minLevel: 2 }] },
+      { id: '433b_monaco', name: "4-3-3B (レ・ルージュ・エ・ブラン’04)", comboId: 'monaco04', slots: [{ id: 1, pos: 'GK', label: 'GK', top: '88%', left: '50%', requiredStyle: 'オーソドックスGK', minLevel: 2 }, { id: 2, pos: 'LB', label: 'LB', top: '70%', left: '16%' }, { id: 3, pos: 'CB', label: 'LCB', top: '73%', left: '38%' }, { id: 4, pos: 'CB', label: 'RCB', top: '73%', left: '62%' }, { id: 5, pos: 'RB', label: 'RB', top: '70%', left: '84%' }, { id: 6, pos: 'DM', label: 'LDM', top: '54%', left: '36%', requiredStyle: 'パサー', minLevel: 2 }, { id: 7, pos: 'DM', label: 'RDM', top: '54%', left: '64%' }, { id: 8, pos: 'AM', label: 'AM', top: '34%', left: '50%' }, { id: 9, pos: 'LW', label: 'LW', top: '18%', left: '20%', requiredStyle: 'サイドアタッカーLW', minLevel: 2 }, { id: 10, pos: 'CF', label: 'CF', top: '14%', left: '50%' }, { id: 11, pos: 'RW', label: 'RW', top: '18%', left: '80%' }] },
+      { id: '532a_amarela', name: "5-3-2A (ヴァルデ・アマレーラ’02)", comboId: 'amarela02', slots: [{ id: 1, pos: 'GK', label: 'GK', top: '88%', left: '50%' }, { id: 2, pos: 'LB', label: 'LB', top: '68%', left: '14%' }, { id: 3, pos: 'CB', label: 'LCB', top: '74%', left: '32%' }, { id: 4, pos: 'CB', label: 'CB', top: '76%', left: '50%', requiredStyle: 'ストッパー', minLevel: 2 }, { id: 5, pos: 'CB', label: 'RCB', top: '74%', left: '68%' }, { id: 6, pos: 'RB', label: 'RB', top: '68%', left: '86%' }, { id: 7, pos: 'DM', label: 'DM', top: '56%', left: '50%' }, { id: 8, pos: 'AM', label: 'LAM', top: '35%', left: '32%' }, { id: 9, pos: 'AM', label: 'RAM', top: '35%', left: '68%' }, { id: 10, pos: 'CF', label: 'LCF', top: '16%', left: '36%', requiredStyle: 'ストライカー', minLevel: 2 }, { id: 11, pos: 'CF', label: 'RCF', top: '16%', left: '64%' }] },
+      { id: '352b_danish86', name: "3-5-2B (ダニッシュ・ダイナマイト’86)", comboId: 'danishDynamite86', slots: [{ id: 1, pos: 'GK', label: 'GK', top: '88%', left: '50%' }, { id: 2, pos: 'CB', label: 'LCB', top: '72%', left: '26%' }, { id: 3, pos: 'CB', label: 'CB', top: '74%', left: '50%' }, { id: 4, pos: 'CB', label: 'RCB', top: '72%', left: '74%' }, { id: 5, pos: 'DM', label: 'LDM', top: '56%', left: '38%', requiredStyle: 'ハードマーカー', minLevel: 2 }, { id: 6, pos: 'DM', label: 'RDM', top: '56%', left: '62%' }, { id: 7, pos: 'LM', label: 'LM', top: '40%', left: '18%' }, { id: 8, pos: 'AM', label: 'AM', top: '34%', left: '50%' }, { id: 9, pos: 'RM', label: 'RM', top: '40%', left: '82%' }, { id: 10, pos: 'CF', label: 'LCF', top: '16%', left: '36%' }, { id: 11, pos: 'CF', label: 'RCF', top: '16%', left: '64%', requiredStyle: 'ラインブレーカー', minLevel: 2 }] },
+      { id: '442a_amarillo', name: "4-4-2A (サブマリーノ・アマリーリョ’06)", comboId: 'amarillo06', slots: [{ id: 1, pos: 'GK', label: 'GK', top: '88%', left: '50%', requiredStyle: 'オーソドックスGK', minLevel: 2 }, { id: 2, pos: 'LB', label: 'LB', top: '70%', left: '16%' }, { id: 3, pos: 'CB', label: 'LCB', top: '73%', left: '38%' }, { id: 4, pos: 'CB', label: 'RCB', top: '73%', left: '62%' }, { id: 5, pos: 'RB', label: 'RB', top: '70%', left: '84%' }, { id: 6, pos: 'DM', label: 'DM', top: '56%', left: '50%' }, { id: 7, pos: 'LM', label: 'LM', top: '40%', left: '20%' }, { id: 8, pos: 'AM', label: 'AM', top: '34%', left: '50%' }, { id: 9, pos: 'RM', label: 'RM', top: '40%', left: '80%', requiredStyle: 'サイドアタッカーRM', minLevel: 2 }, { id: 10, pos: 'CF', label: 'LCF', top: '16%', left: '36%', requiredStyle: 'ポストプレーヤー', minLevel: 2 }, { id: 11, pos: 'CF', label: 'RCF', top: '16%', left: '64%' }] },
+      { id: '442d_losMillonarios', name: "4-4-2D (ロス・ミリョナリオス’86)", comboId: 'losMillonarios86', slots: [{ id: 1, pos: 'GK', label: 'GK', top: '88%', left: '50%' }, { id: 2, pos: 'LB', label: 'LB', top: '70%', left: '16%' }, { id: 3, pos: 'CB', label: 'LCB', top: '73%', left: '38%', requiredStyle: 'ストッパー', minLevel: 2 }, { id: 4, pos: 'CB', label: 'RCB', top: '73%', left: '62%' }, { id: 5, pos: 'RB', label: 'RB', top: '70%', left: '84%' }, { id: 6, pos: 'DM', label: 'LDM', top: '54%', left: '26%' }, { id: 7, pos: 'DM', label: 'DM', top: '56%', left: '50%' }, { id: 8, pos: 'DM', label: 'RDM', top: '54%', left: '74%' }, { id: 9, pos: 'AM', label: 'AM', top: '34%', left: '50%', requiredStyle: 'アタッカー', minLevel: 2 }, { id: 10, pos: 'CF', label: 'LCF', top: '16%', left: '36%', requiredStyle: 'ストライカー', minLevel: 2 }, { id: 11, pos: 'CF', label: 'RCF', top: '16%', left: '64%' }] },
+      { id: '433b_hinomaru', name: "4-3-3B (ヒノマルスタイル’93)", comboId: 'hinomaru93', slots: [{ id: 1, pos: 'GK', label: 'GK', top: '88%', left: '50%' }, { id: 2, pos: 'LB', label: 'LB', top: '70%', left: '16%', requiredStyle: '守備的LB', minLevel: 2 }, { id: 3, pos: 'CB', label: 'LCB', top: '73%', left: '38%' }, { id: 4, pos: 'CB', label: 'RCB', top: '73%', left: '62%' }, { id: 5, pos: 'RB', label: 'RB', top: '70%', left: '84%' }, { id: 6, pos: 'DM', label: 'LDM', top: '54%', left: '36%', requiredStyle: 'セントラルDM', minLevel: 2 }, { id: 7, pos: 'DM', label: 'RDM', top: '54%', left: '64%' }, { id: 8, pos: 'AM', label: 'AM', top: '34%', left: '50%' }, { id: 9, pos: 'LW', label: 'LW', top: '18%', left: '20%' }, { id: 10, pos: 'CF', label: 'CF', top: '14%', left: '50%' }, { id: 11, pos: 'RW', label: 'RW', top: '18%', left: '80%', requiredStyle: 'ドリブラーRW', minLevel: 2 }] },
+      { id: '451a_schwarzGelben', name: "4-5-1A (シュヴァルツ・ゲルベン’16)", comboId: 'schwarzGelben16', slots: [{ id: 1, pos: 'GK', label: 'GK', top: '88%', left: '50%', requiredStyle: 'オーソドックスGK', minLevel: 2 }, { id: 2, pos: 'LB', label: 'LB', top: '70%', left: '16%' }, { id: 3, pos: 'CB', label: 'LCB', top: '73%', left: '38%', requiredStyle: 'ストッパー', minLevel: 2 }, { id: 4, pos: 'CB', label: 'RCB', top: '73%', left: '62%' }, { id: 5, pos: 'RB', label: 'RB', top: '70%', left: '84%', requiredStyle: '攻撃的RB', minLevel: 2 }, { id: 6, pos: 'DM', label: 'DM', top: '56%', left: '50%' }, { id: 7, pos: 'LM', label: 'LM', top: '40%', left: '20%' }, { id: 8, pos: 'AM', label: 'LAM', top: '35%', left: '34%' }, { id: 9, pos: 'AM', label: 'RAM', top: '35%', left: '66%' }, { id: 10, pos: 'RM', label: 'RM', top: '40%', left: '80%' }, { id: 11, pos: 'CF', label: 'CF', top: '14%', left: '50%' }] },
+      { id: '343c_hinomaru68', name: "3-4-3C (ヒノマルスタイル’68)", comboId: 'hinomaru68', slots: [{ id: 1, pos: 'GK', label: 'GK', top: '88%', left: '50%' }, { id: 2, pos: 'CB', label: 'LCB', top: '72%', left: '26%', requiredStyle: 'ストッパー', minLevel: 2 }, { id: 3, pos: 'CB', label: 'CB', top: '74%', left: '50%' }, { id: 4, pos: 'CB', label: 'RCB', top: '72%', left: '74%' }, { id: 5, pos: 'DM', label: 'LDM', top: '54%', left: '38%' }, { id: 6, pos: 'DM', label: 'RDM', top: '54%', left: '62%' }, { id: 7, pos: 'AM', label: 'LAM', top: '35%', left: '32%' }, { id: 8, pos: 'AM', label: 'RAM', top: '35%', left: '68%' }, { id: 9, pos: 'LW', label: 'LW', top: '18%', left: '20%', requiredStyle: 'ドリブラーLW', minLevel: 2 }, { id: 10, pos: 'CF', label: 'CF', top: '14%', left: '50%', requiredStyle: 'ストライカー', minLevel: 2 }, { id: 11, pos: 'RW', label: 'RW', top: '18%', left: '80%' }] },
+      { id: '442e_blanquiroja', name: "4-4-2E (ラ・ブランキロハ’82)", comboId: 'blanquiroja82', slots: [{ id: 1, pos: 'GK', label: 'GK', top: '88%', left: '50%' }, { id: 2, pos: 'LB', label: 'LB', top: '70%', left: '16%' }, { id: 3, pos: 'CB', label: 'LCB', top: '73%', left: '38%' }, { id: 4, pos: 'CB', label: 'RCB', top: '73%', left: '62%' }, { id: 5, pos: 'RB', label: 'RB', top: '70%', left: '84%' }, { id: 6, pos: 'DM', label: 'DM', top: '56%', left: '50%' }, { id: 7, pos: 'AM', label: 'LAM', top: '38%', left: '24%', requiredStyle: 'パサーAM', minLevel: 2 }, { id: 8, pos: 'AM', label: 'AM', top: '34%', left: '50%', requiredStyle: 'アタッカー', minLevel: 2 }, { id: 9, pos: 'AM', label: 'RAM', top: '38%', left: '76%' }, { id: 10, pos: 'CF', label: 'LCF', top: '16%', left: '36%' }, { id: 11, pos: 'CF', label: 'RCF', top: '16%', left: '64%' }] },
+      { id: '442a_losPuros', name: "4-4-2A (ロス・プロス’01)", comboId: 'losPuros01', slots: [{ id: 1, pos: 'GK', label: 'GK', top: '88%', left: '50%', requiredStyle: 'スイーパーGK', minLevel: 2 }, { id: 2, pos: 'LB', label: 'LB', top: '70%', left: '16%' }, { id: 3, pos: 'CB', label: 'LCB', top: '73%', left: '38%' }, { id: 4, pos: 'CB', label: 'RCB', top: '73%', left: '62%' }, { id: 5, pos: 'RB', label: 'RB', top: '70%', left: '84%', requiredStyle: '守備的RB', minLevel: 2 }, { id: 6, pos: 'DM', label: 'DM', top: '56%', left: '50%' }, { id: 7, pos: 'LM', label: 'LM', top: '40%', left: '20%' }, { id: 8, pos: 'AM', label: 'AM', top: '34%', left: '50%' }, { id: 9, pos: 'RM', label: 'RM', top: '40%', left: '80%' }, { id: 10, pos: 'CF', label: 'LCF', top: '16%', left: '36%' }, { id: 11, pos: 'CF', label: 'RCF', top: '16%', left: '64%' }] },
+      { id: '451b_greenFalcons', name: "4-5-1B (グリーン・ファルコンズ’98)", comboId: 'greenFalcons98', slots: [{ id: 1, pos: 'GK', label: 'GK', top: '88%', left: '50%' }, { id: 2, pos: 'LB', label: 'LB', top: '70%', left: '16%' }, { id: 3, pos: 'CB', label: 'LCB', top: '73%', left: '38%', requiredStyle: '組立CB', minLevel: 2 }, { id: 4, pos: 'CB', label: 'RCB', top: '73%', left: '62%' }, { id: 5, pos: 'RB', label: 'RB', top: '70%', left: '84%', requiredStyle: '守備的RB', minLevel: 2 }, { id: 6, pos: 'DM', label: 'LDM', top: '54%', left: '36%' }, { id: 7, pos: 'DM', label: 'RDM', top: '54%', left: '64%' }, { id: 8, pos: 'LM', label: 'LM', top: '38%', left: '18%', requiredStyle: 'ドリブラーLM', minLevel: 2 }, { id: 9, pos: 'AM', label: 'AM', top: '34%', left: '50%' }, { id: 10, pos: 'RM', label: 'RM', top: '38%', left: '82%' }, { id: 11, pos: 'CF', label: 'CF', top: '14%', left: '50%' }] },
+      { id: '442b_orlovi', name: "4-4-2B (オルロヴィ’24)", comboId: 'orlovi24', slots: [{ id: 1, pos: 'GK', label: 'GK', top: '88%', left: '50%', requiredStyle: 'オーソドックスGK', minLevel: 2 }, { id: 2, pos: 'LB', label: 'LB', top: '70%', left: '16%' }, { id: 3, pos: 'CB', label: 'LCB', top: '73%', left: '38%' }, { id: 4, pos: 'CB', label: 'RCB', top: '73%', left: '62%' }, { id: 5, pos: 'RB', label: 'RB', top: '70%', left: '84%' }, { id: 6, pos: 'DM', label: 'LDM', top: '56%', left: '36%', requiredStyle: 'セントラルDM', minLevel: 2 }, { id: 7, pos: 'DM', label: 'RDM', top: '56%', left: '64%' }, { id: 8, pos: 'LM', label: 'LM', top: '38%', left: '18%' }, { id: 9, pos: 'RM', label: 'RM', top: '38%', left: '82%' }, { id: 10, pos: 'CF', label: 'LCF', top: '16%', left: '36%', requiredStyle: 'ストライカー', minLevel: 2 }, { id: 11, pos: 'CF', label: 'RCF', top: '16%', left: '64%' }] },
+      { id: '442b_laRoja02', name: "4-4-2B (ラ・ロハ’02)", comboId: 'laRoja02', slots: [{ id: 1, pos: 'GK', label: 'GK', top: '88%', left: '50%', requiredStyle: 'オーソドックスGK', minLevel: 2 }, { id: 2, pos: 'LB', label: 'LB', top: '70%', left: '16%' }, { id: 3, pos: 'CB', label: 'LCB', top: '73%', left: '38%', requiredStyle: 'ストッパー', minLevel: 2 }, { id: 4, pos: 'CB', label: 'RCB', top: '73%', left: '62%' }, { id: 5, pos: 'RB', label: 'RB', top: '70%', left: '84%' }, { id: 6, pos: 'DM', label: 'LDM', top: '56%', left: '36%' }, { id: 7, pos: 'DM', label: 'RDM', top: '56%', left: '64%' }, { id: 8, pos: 'LM', label: 'LM', top: '38%', left: '18%' }, { id: 9, pos: 'RM', label: 'RM', top: '38%', left: '82%' }, { id: 10, pos: 'CF', label: 'LCF', top: '16%', left: '36%', requiredStyle: 'ラインブレーカー', minLevel: 2 }, { id: 11, pos: 'CF', label: 'RCF', top: '16%', left: '64%' }] },
+      { id: '343c_elLeon70', name: "3-4-3C (エル・レオン’70)", comboId: 'elLeon70', slots: [{ id: 1, pos: 'GK', label: 'GK', top: '88%', left: '50%' }, { id: 2, pos: 'CB', label: 'LCB', top: '72%', left: '26%' }, { id: 3, pos: 'CB', label: 'CB', top: '74%', left: '50%', requiredStyle: 'ストッパー', minLevel: 2 }, { id: 4, pos: 'CB', label: 'RCB', top: '72%', left: '74%' }, { id: 5, pos: 'DM', label: 'LDM', top: '54%', left: '38%' }, { id: 6, pos: 'DM', label: 'RDM', top: '54%', left: '62%' }, { id: 7, pos: 'AM', label: 'LAM', top: '35%', left: '32%', requiredStyle: 'アタッカー', minLevel: 2 }, { id: 8, pos: 'AM', label: 'RAM', top: '35%', left: '68%' }, { id: 9, pos: 'LW', label: 'LW', top: '18%', left: '20%', requiredStyle: 'ドリブラーLW', minLevel: 2 }, { id: 10, pos: 'CF', label: 'CF', top: '14%', left: '50%' }, { id: 11, pos: 'RW', label: 'RW', top: '18%', left: '80%' }] },
+      { id: '451a_ulcitca03', name: "4-5-1A (ウルチカ’03)", comboId: 'ulcitca03', slots: [{ id: 1, pos: 'GK', label: 'GK', top: '88%', left: '50%' }, { id: 2, pos: 'LB', label: 'LB', top: '70%', left: '16%', requiredStyle: '守備的LB', minLevel: 2 }, { id: 3, pos: 'CB', label: 'LCB', top: '73%', left: '38%' }, { id: 4, pos: 'CB', label: 'RCB', top: '73%', left: '62%' }, { id: 5, pos: 'RB', label: 'RB', top: '70%', left: '84%' }, { id: 6, pos: 'DM', label: 'DM', top: '56%', left: '50%' }, { id: 7, pos: 'LM', label: 'LM', top: '40%', left: '20%' }, { id: 8, pos: 'AM', label: 'LAM', top: '35%', left: '34%' }, { id: 9, pos: 'AM', label: 'RAM', top: '35%', left: '66%', requiredStyle: 'アタッカー', minLevel: 2 }, { id: 10, pos: 'RM', label: 'RM', top: '40%', left: '80%' }, { id: 11, pos: 'CF', label: 'CF', top: '14%', left: '50%', requiredStyle: 'ポストプレーヤー', minLevel: 2 }] },
+      { id: '433a_diablesRouges18', name: "4-3-3A (ディアブル・ルージュ’18)", comboId: 'diablesRouges18', slots: [{ id: 1, pos: 'GK', label: 'GK', top: '88%', left: '50%' }, { id: 2, pos: 'LB', label: 'LB', top: '70%', left: '16%' }, { id: 3, pos: 'CB', label: 'LCB', top: '73%', left: '38%' }, { id: 4, pos: 'CB', label: 'RCB', top: '73%', left: '62%', requiredStyle: '組立CB', minLevel: 2 }, { id: 5, pos: 'RB', label: 'RB', top: '70%', left: '84%' }, { id: 6, pos: 'DM', label: 'DM', top: '54%', left: '50%' }, { id: 7, pos: 'AM', label: 'LAM', top: '35%', left: '32%' }, { id: 8, pos: 'AM', label: 'RAM', top: '35%', left: '68%' }, { id: 9, pos: 'LW', label: 'LW', top: '18%', left: '20%' }, { id: 10, pos: 'CF', label: 'CF', top: '14%', left: '50%' }, { id: 11, pos: 'RW', label: 'RW', top: '18%', left: '80%', requiredStyle: 'ドリブラーRW', minLevel: 2 }] },
+      { id: '343b_taegukWarriors02', name: "3-4-3B (太極戦士’02)", comboId: 'taegukWarriors02', slots: [{ id: 1, pos: 'GK', label: 'GK', top: '88%', left: '50%' }, { id: 2, pos: 'CB', label: 'LCB', top: '72%', left: '26%' }, { id: 3, pos: 'CB', label: 'CB', top: '74%', left: '50%', requiredStyle: 'ストッパー', minLevel: 2 }, { id: 4, pos: 'CB', label: 'RCB', top: '72%', left: '74%' }, { id: 5, pos: 'DM', label: 'LDM', top: '56%', left: '38%' }, { id: 6, pos: 'DM', label: 'RDM', top: '56%', left: '62%' }, { id: 7, pos: 'LM', label: 'LM', top: '38%', left: '18%', requiredStyle: 'ドリブラーLM', minLevel: 2 }, { id: 8, pos: 'RM', label: 'RM', top: '38%', left: '82%' }, { id: 9, pos: 'LW', label: 'LW', top: '18%', left: '20%' }, { id: 10, pos: 'CF', label: 'CF', top: '14%', left: '50%' }, { id: 11, pos: 'RW', label: 'RW', top: '18%', left: '80%' }] },
+      { id: '541a_dieAdler24', name: "5-4-1A (ディー・アドラー’24)", comboId: 'dieAdler24', slots: [{ id: 1, pos: 'GK', label: 'GK', top: '88%', left: '50%' }, { id: 2, pos: 'LB', label: 'LB', top: '68%', left: '14%' }, { id: 3, pos: 'CB', label: 'LCB', top: '74%', left: '32%' }, { id: 4, pos: 'CB', label: 'CB', top: '76%', left: '50%', requiredStyle: 'ストッパー', minLevel: 2 }, { id: 5, pos: 'CB', label: 'RCB', top: '74%', left: '68%' }, { id: 6, pos: 'RB', label: 'RB', top: '68%', left: '86%' }, { id: 7, pos: 'DM', label: 'LDM', top: '54%', left: '36%' }, { id: 8, pos: 'DM', label: 'RDM', top: '54%', left: '64%', requiredStyle: 'パサーDM', minLevel: 2 }, { id: 9, pos: 'AM', label: 'LAM', top: '35%', left: '32%' }, { id: 10, pos: 'AM', label: 'RAM', top: '35%', left: '68%' }, { id: 11, pos: 'CF', label: 'CF', top: '14%', left: '50%', requiredStyle: 'ラインブレーカー', minLevel: 2 }] },
+      { id: '451b_viola99', name: "4-5-1B (ヴィオラ’99)", comboId: 'viola99', slots: [{ id: 1, pos: 'GK', label: 'GK', top: '88%', left: '50%', requiredStyle: 'オーソドックスGK', minLevel: 2 }, { id: 2, pos: 'LB', label: 'LB', top: '70%', left: '16%' }, { id: 3, pos: 'CB', label: 'LCB', top: '73%', left: '38%' }, { id: 4, pos: 'CB', label: 'RCB', top: '73%', left: '62%' }, { id: 5, pos: 'RB', label: 'RB', top: '70%', left: '84%', requiredStyle: '攻撃的RB', minLevel: 2 }, { id: 6, pos: 'DM', label: 'LDM', top: '54%', left: '36%' }, { id: 7, pos: 'DM', label: 'RDM', top: '54%', left: '64%' }, { id: 8, pos: 'LM', label: 'LM', top: '38%', left: '18%' }, { id: 9, pos: 'AM', label: 'AM', top: '34%', left: '50%', requiredStyle: 'パサーAM', minLevel: 2 }, { id: 10, pos: 'RM', label: 'RM', top: '38%', left: '82%' }, { id: 11, pos: 'CF', label: 'CF', top: '14%', left: '50%' }] }
+    ];
+
+    function App() {
+      // 🎨 テーマ切り替え ('dark' | 'light')
+      const [theme, setTheme] = useState(() => {
+        try { return localStorage.getItem('sfcc_theme') || 'dark'; } catch(e){ return 'dark'; }
+      });
+
+      useEffect(() => {
+        document.body.className = `theme-${theme} min-h-screen pb-16`;
+        try { localStorage.setItem('sfcc_theme', theme); } catch(e){}
+      }, [theme]);
+
+      const [activeTab, setActiveTab] = useState('builder');
+      const [isMaxMode, setIsMaxMode] = useState(false);
+      const [isFormationLocked, setIsFormationLocked] = useState(false);
+      const [selectedDetailCategory, setSelectedDetailCategory] = useState('shoot');
+      const masterPlayers = window.INITIAL_PLAYERS || [];
+
+      // データベースから動的に選択肢を生成
+      const allPositions = useMemo(() => {
+        const set = new Set();
+        masterPlayers.forEach(p => {
+          if (p.mainPosition) set.add(p.mainPosition);
+          if (p.subPositions) p.subPositions.forEach(sp => set.add(sp));
+        });
+        const order = ['GK', 'CB', 'LB', 'RB', 'DM', 'LM', 'RM', 'AM', 'LW', 'RW', 'CF', 'ST'];
+        return Array.from(set).sort((a, b) => {
+          const ia = order.indexOf(a), ib = order.indexOf(b);
+          return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
+        });
+      }, [masterPlayers]);
+
+      // プレイスタイルを「系統名（サイドアタッカー/ドリブラー等）」に統合して動的生成
+      const allPlayStyles = useMemo(() => {
+        const set = new Set();
+        masterPlayers.forEach(p => {
+          if (p.playStyle) {
+            const base = getBasePlayStyle(p.playStyle);
+            if (base) set.add(base);
+          }
+          if (p.subPlayStyles) {
+            p.subPlayStyles.forEach(s => {
+              const base = getBasePlayStyle(s);
+              if (base) set.add(base);
+            });
+          }
+        });
+        return Array.from(set).sort();
+      }, [masterPlayers]);
+
+      const allNationalities = useMemo(() => {
+        return [...new Set(masterPlayers.map(p => p.nationality))].filter(Boolean).sort();
+      }, [masterPlayers]);
+
+      // 1. 所持状況 (安全なlocalStorageラッパー)
+      const [inventory, setInventory] = useState(() => {
+        try {
+          const d = localStorage.getItem('sfcc_v2_inventory');
+          if (d) {
+            const parsed = JSON.parse(d);
+            if (parsed && typeof parsed === 'object') return parsed;
+          }
+        } catch(e){}
+        const init = {};
+        masterPlayers.forEach(p => init[p.id] = p.baseRarity || p.rarity || '☆3');
+        return init;
+      });
+
+      useEffect(() => {
+        try {
+          localStorage.setItem('sfcc_v2_inventory', JSON.stringify(inventory));
+        } catch(e){}
+      }, [inventory]);
+
+      // レアリティ変更 (正順 / 逆順)
+      const handleRarityNext = useCallback((pId) => {
+        if (!pId || typeof pId !== 'string') return;
+        setInventory(prev => {
+          const current = (prev && typeof prev[pId] === 'string') ? prev[pId] : null;
+          const idx = RARITY_SEQ.indexOf(current);
+          const next = RARITY_SEQ[(idx + 1) % RARITY_SEQ.length];
+          return { ...prev, [pId]: next };
+        });
+      }, []);
+
+      const handleRarityPrev = useCallback((pId) => {
+        if (!pId || typeof pId !== 'string') return;
+        setInventory(prev => {
+          const current = (prev && typeof prev[pId] === 'string') ? prev[pId] : null;
+          const idx = RARITY_SEQ.indexOf(current);
+          const prevRarity = RARITY_SEQ[(idx - 1 + RARITY_SEQ.length) % RARITY_SEQ.length];
+          return { ...prev, [pId]: prevRarity };
+        });
+      }, []);
+
+      // 長押し連続ループ (1周8段階で約3秒 ＝ 1段階あたり375ms)
+      const holdTimerRef = useRef(null);
+      const loopIntervalRef = useRef(null);
+      const isLoopingRef = useRef(false);
+
+      const startHoldLoop = (pId) => {
+        isLoopingRef.current = false;
+        if (holdTimerRef.current) clearTimeout(holdTimerRef.current);
+        if (loopIntervalRef.current) clearInterval(loopIntervalRef.current);
+
+        holdTimerRef.current = setTimeout(() => {
+          isLoopingRef.current = true;
+          handleRarityNext(pId);
+          loopIntervalRef.current = setInterval(() => {
+            handleRarityNext(pId);
+          }, 375); // 375ms × 8段階 ＝ 3秒で1周
+        }, 350);
+      };
+
+      const stopHoldLoop = (pId, e) => {
+        if (holdTimerRef.current) clearTimeout(holdTimerRef.current);
+        if (loopIntervalRef.current) clearInterval(loopIntervalRef.current);
+
+        // 長押しループに移行していなければ単発左クリックとして1回進める
+        if (!isLoopingRef.current && (!e || e.button === 0)) {
+          handleRarityNext(pId);
+        }
+        isLoopingRef.current = false;
+      };
+
+      // 2. バフ設定
+      const [customBuffs, setCustomBuffs] = useState(() => {
+        try { const d = localStorage.getItem('sfcc_v2_buffs'); if(d) return JSON.parse(d); } catch(e){}
+        return { rate: 20, nationalities: ['日本'], policies: [] };
+      });
+      useEffect(() => { try { localStorage.setItem('sfcc_v2_buffs', JSON.stringify(customBuffs)); } catch(e){} }, [customBuffs]);
+
+      const [buffPresets, setBuffPresets] = useState(() => {
+        try { const d = localStorage.getItem('sfcc_v2_buff_presets'); if(d) return JSON.parse(d); } catch(e){}
+        return [];
+      });
+      useEffect(() => { try { localStorage.setItem('sfcc_v2_buff_presets', JSON.stringify(buffPresets)); } catch(e){} }, [buffPresets]);
+
+      const [isBuffModalOpen, setIsBuffModalOpen] = useState(false);
+      const [presetName, setPresetName] = useState('');
+
+      // 3. ビルダー状態
+      const [selectedFormation, setSelectedFormation] = useState(FORMATIONS[0]);
+      const [teamPolicy, setTeamPolicy] = useState('リアクション');
+      const [squad, setSquad] = useState({});
+      const [bench, setBench] = useState({});
+
+      const [activeSlotModal, setActiveSlotModal] = useState(null);
+      const [modalSearch, setModalSearch] = useState('');
+      const [selectedDetailPlayer, setSelectedDetailPlayer] = useState(null);
+      const [detailTab, setDetailTab] = useState('summary');
+
+      // 自動最適編成 (フォメコン固定対応)
+      const handleAutoBuild = () => {
+        const candidates = masterPlayers
+          .filter(p => inventory[p.id])
+          .map(p => ({
+            ...p,
+            currentRarity: inventory[p.id],
+            effectivePower: getPlayerEffectivePower(p, inventory[p.id], customBuffs, isMaxMode)
+          }))
+          .sort((a, b) => b.effectivePower - a.effectivePower);
+
+        let bestGrandTotal = -1;
+        let bestResult = null;
+
+        // 固定フラグがONなら現在のフォーメーションのみ、OFFなら全フォーメーションを探索
+        const targetFormations = isFormationLocked ? [selectedFormation] : FORMATIONS;
+
+        targetFormations.forEach(fmt => {
+          const combo = FORMATION_COMBOS.find(c => c.id === fmt.comboId);
+          const tPol = combo ? combo.policy : teamPolicy;
+
+          const sq = {};
+          const bnc = {};
+          const usedBaseNames = new Set();
+
+          // 1. キープレイスタイル必須枠を優先埋め
+          fmt.slots.forEach(slot => {
+            if (slot.requiredStyle) {
+              const match = candidates.find(p => !usedBaseNames.has(getBaseName(p.name)) && (p.mainPosition === slot.pos || p.subPositions?.includes(slot.pos)) && checkStyleReq(p, slot.requiredStyle, slot.minLevel));
+              if (match) { sq[slot.id] = match; usedBaseNames.add(getBaseName(match.name)); }
+            }
+          });
+
+          // 2. 残りの枠を最適埋め
+          fmt.slots.forEach(slot => {
+            if (!sq[slot.id]) {
+              const match = candidates.find(p => !usedBaseNames.has(getBaseName(p.name)) && (p.mainPosition === slot.pos || p.subPositions?.includes(slot.pos)));
+              if (match) { sq[slot.id] = match; usedBaseNames.add(getBaseName(match.name)); }
+              else {
+                const fallback = candidates.find(p => !usedBaseNames.has(getBaseName(p.name)));
+                if (fallback) { sq[slot.id] = fallback; usedBaseNames.add(getBaseName(fallback.name)); }
+              }
+            }
+          });
+
+          // 3. ベンチ12枠を埋める
+          let bIdx = 0;
+          candidates.forEach(p => {
+            if (!usedBaseNames.has(getBaseName(p.name)) && bIdx < 12) {
+              bnc[bIdx] = p;
+              usedBaseNames.add(getBaseName(p.name));
+              bIdx++;
+            }
+          });
+
+          const startersList = Object.values(sq);
+          const policyAdj = startersList.reduce((acc, p) => acc + (p.policy === tPol ? Math.floor(p.effectivePower * 1.05) : p.effectivePower), 0);
+          const isComboAct = fmt.slots.filter(s => s.requiredStyle).every(s => sq[s.id] && checkStyleReq(sq[s.id], s.requiredStyle, s.minLevel));
+          const brzCount = combo?.specialBrazil ? startersList.filter(p => p.nationality === 'ブラジル').length : 0;
+          const cBonus = isComboAct ? Math.floor(policyAdj * (0.15 + (brzCount * 0.02))) : 0;
+          const gTot = policyAdj + cBonus;
+
+          if (gTot > bestGrandTotal) {
+            bestGrandTotal = gTot;
+            bestResult = { fmt, tPol, sq, bnc };
+          }
+        });
+
+        if (bestResult) {
+          if (!isFormationLocked) {
+            setSelectedFormation(bestResult.fmt);
+            setTeamPolicy(bestResult.tPol);
+          }
+          setSquad(bestResult.sq);
+          setBench(bestResult.bnc);
+        } else {
+          alert('所持選手が11名未満です！');
+        }
+      };
+
+      // 手動編成の選手候補
+      const modalCandidates = useMemo(() => {
+        if (!activeSlotModal) return [];
+        const q = normalizeString(modalSearch);
+        const reqStyle = activeSlotModal.slotDef?.requiredStyle;
+        const reqLevel = activeSlotModal.slotDef?.minLevel || 1;
+        const tgtPos = activeSlotModal.slotDef?.pos;
+
+        return masterPlayers
+          .filter(p => inventory[p.id])
+          .filter(p => {
+            if (!q) return true;
+            return normalizeString(p.name).includes(q) || normalizeString(p.readingName).includes(q) || (p.nationality && normalizeString(p.nationality).includes(q)) || (p.playStyle && normalizeString(p.playStyle).includes(q));
+          })
+          .map(p => {
+            const pId = p.id;
+            let currentLoc = null;
+            Object.keys(squad).forEach(k => { if(squad[k]?.id===pId) currentLoc=`スタメン(${FORMATIONS.find(f=>f.id===selectedFormation.id).slots.find(s=>String(s.id)===k)?.label})` });
+            if(!currentLoc) Object.keys(bench).forEach(k => { if(bench[k]?.id===pId) currentLoc=`SUB${Number(k)+1}` });
+            
+            return {
+              ...p,
+              currentRarity: inventory[p.id],
+              effectivePower: getPlayerEffectivePower(p, inventory[p.id], customBuffs, isMaxMode),
+              currentLoc
+            };
+          })
+          .sort((a, b) => {
+            if (activeSlotModal.type === 'starter') {
+              const aReqOk = reqStyle ? checkStyleReq(a, reqStyle, reqLevel) : false;
+              const bReqOk = reqStyle ? checkStyleReq(b, reqStyle, reqLevel) : false;
+              if (aReqOk && !bReqOk) return -1;
+              if (!aReqOk && bReqOk) return 1;
+
+              const aPosOk = a.mainPosition === tgtPos || a.subPositions?.includes(tgtPos);
+              const bPosOk = b.mainPosition === tgtPos || b.subPositions?.includes(tgtPos);
+              if (aPosOk && !bPosOk) return -1;
+              if (!aPosOk && bPosOk) return 1;
+            }
+            return b.effectivePower - a.effectivePower;
+          });
+      }, [masterPlayers, inventory, activeSlotModal, modalSearch, customBuffs, squad, bench, selectedFormation, isMaxMode]);
+
+      const handleAssignPlayer = (p) => {
+        const pId = p.id;
+        let prevType = null; let prevId = null;
+        Object.keys(squad).forEach(k => { if (squad[k]?.id === pId) { prevType = 'starter'; prevId = k; } });
+        if (!prevType) Object.keys(bench).forEach(k => { if (bench[k]?.id === pId) { prevType = 'bench'; prevId = k; } });
+
+        const targetType = activeSlotModal.type;
+        const targetId = activeSlotModal.id;
+
+        if (prevType === 'starter') setSquad(prev => { const n = {...prev}; delete n[prevId]; return n; });
+        else if (prevType === 'bench') setBench(prev => { const n = {...prev}; delete n[prevId]; return n; });
+
+        if (targetType === 'starter') setSquad(prev => ({ ...prev, [targetId]: p }));
+        else setBench(prev => ({ ...prev, [targetId]: p }));
+        
+        setActiveSlotModal(null);
+      };
+
+      // 総合力計算
+      const starters = Object.values(squad).filter(Boolean);
+      const rawTotal = starters.reduce((sum, p) => sum + getPlayerOverall(p, inventory[p.id] || p.currentRarity || '☆3', isMaxMode), 0);
+      const policyAdjusted = starters.reduce((sum, p) => {
+        const eff = getPlayerEffectivePower(p, inventory[p.id] || p.currentRarity || '☆3', customBuffs, isMaxMode);
+        return sum + (p.policy === teamPolicy ? Math.floor(eff * 1.05) : eff);
+      }, 0);
+      const isComboActive = selectedFormation.slots.filter(s => s.requiredStyle).every(s => squad[s.id] && checkStyleReq(squad[s.id], s.requiredStyle, s.minLevel));
+      const combo = FORMATION_COMBOS.find(c => c.id === selectedFormation.comboId);
+      const brazilCount = combo?.specialBrazil ? starters.filter(p => p.nationality === 'ブラジル').length : 0;
+      const comboBonusRate = isComboActive ? (0.15 + (brazilCount * 0.02)) : 0;
+      const comboBonus = Math.floor(policyAdjusted * comboBonusRate);
+      const grandTotal = policyAdjusted + comboBonus;
+
+      // 所持管理フィルタ (順序: 検索バー → ポジション → プレスタ → 国籍 → 所持未所持)
+      const [invFilters, setInvFilters] = useState({ name: '', pos: 'ALL', playStyle: 'ALL', nat: 'ALL', state: 'ALL' });
+      // 所持管理フィルタ (系統名でのプレイスタイル判定)
+      const filteredInvPlayers = useMemo(() => {
+        const q = normalizeString(invFilters.name);
+        return masterPlayers.filter(p => {
+          if (q && !normalizeString(p.name).includes(q) && !normalizeString(p.readingName).includes(q)) return false;
+          if (invFilters.pos !== 'ALL' && p.mainPosition !== invFilters.pos && !p.subPositions?.includes(invFilters.pos)) return false;
+          
+          // プレイスタイル系統での絞り込み
+          if (invFilters.playStyle !== 'ALL') {
+            const pStyles = [p.playStyle, ...(p.subPlayStyles || [])].filter(Boolean);
+            const hasStyle = pStyles.some(s => getBasePlayStyle(s) === invFilters.playStyle);
+            if (!hasStyle) return false;
+          }
+
+          if (invFilters.nat !== 'ALL' && p.nationality !== invFilters.nat) return false;
+          if (invFilters.state === 'OWNED' && !inventory[p.id]) return false;
+          if (invFilters.state === 'UNOWNED' && inventory[p.id]) return false;
+          return true;
+        });
+      }, [masterPlayers, invFilters, inventory]);
+
+      return (
+        <div className="max-w-[1300px] w-full mx-auto px-2 py-4 space-y-4">
+          <header className="glass-panel p-3.5 sm:p-4 rounded-3xl flex flex-col md:flex-row items-center justify-between gap-3 shadow-xl transition-colors">
+            <div className="flex items-center gap-3">
+              <h1 className={`text-xl sm:text-2xl font-black ${theme === 'dark' ? 'text-transparent bg-clip-text bg-gradient-to-r from-[#00FF66] to-[#00E5FF]' : 'text-emerald-700'}`}>
+                サカつく2026 スカッドシミュレーター　SQUADAPT
+                
+              </h1>
+            </div>
+            
+
+            <div className="flex flex-wrap items-center gap-2 w-full md:w-auto justify-between md:justify-end">
+              {/* テーマ切り替えトグル */}
+              <button 
+                onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-2xl text-xs font-black border transition-all ${
+                  theme === 'dark' 
+                    ? 'bg-slate-800/90 text-amber-300 border-slate-700 hover:bg-slate-700' 
+                    : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-100 shadow-sm'
+                }`}
+                title="テーマ切り替え">
+                {theme === 'dark' ? '☀️ ライト' : '🌙 ダーク'}
+              </button>
+
+              {/* タブナビゲーション */}
+              <nav className={`flex p-1 rounded-2xl border gap-1 ${theme === 'dark' ? 'bg-slate-900/90 border-slate-800' : 'bg-slate-200/80 border-slate-300'}`}>
+                <button onClick={() => setActiveTab('builder')} className={`px-4 py-2 rounded-xl text-xs font-black transition-all ${activeTab === 'builder' ? (theme === 'dark' ? 'bg-[#00FF66] text-slate-950 shadow-lg' : 'bg-emerald-600 text-white shadow') : (theme === 'dark' ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900')}`}>⚽ ビルダー</button>
+                <button onClick={() => setActiveTab('inventory')} className={`px-4 py-2 rounded-xl text-xs font-black transition-all ${activeTab === 'inventory' ? (theme === 'dark' ? 'bg-amber-400 text-slate-950 shadow-lg' : 'bg-amber-500 text-white shadow') : (theme === 'dark' ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900')}`}>📦 所持管理</button>
+              </nav>
+            </div>
+          </header>
+
+          {activeTab === 'builder' && (
+            <div className="space-y-4 animate-fadeIn">
+              <div className="glass-panel p-3 rounded-2xl flex flex-wrap items-center justify-between gap-3 border border-slate-800">
+                <div className="flex flex-wrap gap-2 items-center w-full md:w-auto">
+                  <select value={selectedFormation.id} onChange={e => {
+                    const f = FORMATIONS.find(x => x.id === e.target.value);
+                    setSelectedFormation(f);
+                    const c = FORMATION_COMBOS.find(x => x.id === f.comboId);
+                    if(c) setTeamPolicy(c.policy);
+                  }} className="bg-slate-900 border border-[#00FF66]/50 text-white font-black text-xs md:text-sm px-3 py-2 rounded-xl w-full sm:w-64 focus:outline-none">
+                    {FORMATIONS.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
+                  </select>
+                  <select value={teamPolicy} onChange={e => setTeamPolicy(e.target.value)} className="bg-slate-900 border border-slate-700 text-white font-black text-xs md:text-sm px-3 py-2 rounded-xl focus:outline-none">
+                    {POLICIES.map(p => <option key={p} value={p}>{p}</option>)}
+                  </select>
+
+                  {/* 育成モード切り替えスイッチ */}
+                  <div className="flex bg-slate-950 p-1 rounded-xl border border-slate-700 items-center">
+                    <button onClick={() => setIsMaxMode(false)} className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${!isMaxMode ? 'bg-slate-700 text-white' : 'text-slate-400 hover:text-slate-200'}`}>未育成</button>
+                    <button onClick={() => setIsMaxMode(true)} className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${isMaxMode ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 font-black shadow' : 'text-slate-400 hover:text-slate-200'}`}>🔥 育成後目安</button>
+                  </div>
+
+                  {/* フォメコン固定チェックボックス */}
+                  <label className="flex items-center gap-1.5 bg-slate-950 px-3 py-1.5 rounded-xl border border-slate-700 cursor-pointer select-none">
+                    <input type="checkbox" checked={isFormationLocked} onChange={e => setIsFormationLocked(e.target.checked)} className="accent-[#00FF66] w-4 h-4 cursor-pointer" />
+                    <span className="text-xs font-bold text-slate-300 whitespace-nowrap">🔒 フォメ固定</span>
+                  </label>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button onClick={() => setIsBuffModalOpen(true)} className="px-3 py-2 bg-slate-800 text-[#00E5FF] font-bold text-xs rounded-xl border border-[#00E5FF]/30">⚙️ バフ設定</button>
+                  <button onClick={handleAutoBuild} className="px-4 py-2 bg-gradient-to-r from-[#00FF66] to-[#00E5FF] text-slate-950 font-black text-xs rounded-xl shadow-lg hover:brightness-110">⚡ 自動最適編成</button>
+                  <button onClick={() => { setSquad({}); setBench({}); }} className="px-3 py-2 bg-slate-800 text-red-400 font-bold text-xs rounded-xl border border-red-500/30">全クリア</button>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                <div className="bg-slate-950/80 p-2 rounded-xl border border-slate-800 text-center">
+                  <div className="text-[10px] text-slate-400">基礎総合力 {isMaxMode && '(育成後)'}</div>
+                  <div className="text-lg font-black text-slate-300">{rawTotal.toLocaleString()}</div>
+                </div>
+                <div className="bg-slate-950/80 p-2 rounded-xl border border-cyan-500/40 text-center">
+                  <div className="text-[10px] text-cyan-400">バフ後 (+{customBuffs.rate}%)</div>
+                  <div className="text-lg font-black text-cyan-300">
+                    {starters.reduce((acc, p) => acc + getPlayerEffectivePower(p, inventory[p.id] || p.currentRarity || '☆3', customBuffs, isMaxMode), 0).toLocaleString()}
+                  </div>
+                </div>
+                <div className="bg-slate-950/80 p-2 rounded-xl border border-emerald-500/40 text-center">
+                  <div className="text-[10px] text-[#00FF66]">ポリシー一致</div>
+                  <div className="text-lg font-black text-[#00FF66]">{policyAdjusted.toLocaleString()}</div>
+                </div>
+                <div className="bg-gradient-to-br from-amber-500/20 to-slate-900 p-2 rounded-xl border-2 border-amber-400 text-center shadow-lg">
+                  <div className="text-[10px] text-amber-300 font-black">🏆 最終総合力</div>
+                  <div className="text-xl font-black text-amber-400">{grandTotal.toLocaleString()}</div>
+                </div>
+              </div>
+
+              {/* ピッチ領域 */}
+              <div className="relative w-full aspect-[3/4.8] sm:aspect-[4/4.2] min-h-[640px] max-w-4xl mx-auto rounded-3xl overflow-hidden border border-slate-700 shadow-2xl bg-gradient-to-b from-emerald-950 via-emerald-900 to-emerald-950">
+                <div className="absolute inset-4 border-2 border-white/20 rounded-xl pointer-events-none"></div>
+                <div className="absolute top-1/2 left-4 right-4 h-0.5 bg-white/20 -translate-y-1/2 pointer-events-none"></div>
+                
+                <div className={`absolute top-4 left-4 z-30 px-3 py-1.5 rounded-xl text-[10px] md:text-xs font-black shadow-lg ${isComboActive ? 'bg-emerald-500 text-slate-950 animate-pulse' : 'bg-red-500/80 text-white'}`}>
+                  {isComboActive ? `⚡ ${combo?.name} 発動！` : '⚠️ コンボ未発動'}
+                </div>
+                <div className="absolute top-4 right-4 z-30 px-3 py-1 rounded-lg bg-slate-950/80 text-slate-200 text-[10px] font-bold border border-slate-700">
+                  👆 クリック: 配置変更 | 長押し: 詳細表示
+                </div>
+
+                {selectedFormation.slots.map(slot => {
+                  const p = squad[slot.id];
+                  const effPower = p ? getPlayerEffectivePower(p, inventory[p.id] || p.currentRarity || '☆3', customBuffs, isMaxMode) : 0;
+                  const isReqOk = slot.requiredStyle && p && checkStyleReq(p, slot.requiredStyle, slot.minLevel);
+
+                  // 長押しで詳細表示、短押しで配置変更
+                  let pressTimer = null;
+                  let isLong = false;
+                  const handleStart = () => {
+                    isLong = false;
+                    pressTimer = setTimeout(() => {
+                      if (p) {
+                        isLong = true;
+                        setSelectedDetailPlayer({ ...p, currentRarity: inventory[p.id] || p.baseRarity });
+                        setDetailTab('summary');
+                      }
+                    }, 400);
+                  };
+                  const handleEnd = () => {
+                    if (pressTimer) clearTimeout(pressTimer);
+                  };
+                  const handleClick = () => {
+                    if (!isLong) {
+                      setActiveSlotModal({ type: 'starter', id: slot.id, slotDef: slot });
+                    }
+                    isLong = false;
+                  };
+
+                  return (
+                    <div key={slot.id} 
+                         onMouseDown={handleStart} onMouseUp={handleEnd} onMouseLeave={handleEnd}
+                         onTouchStart={handleStart} onTouchEnd={handleEnd}
+                         onClick={handleClick}
+                         style={{ top: slot.top, left: slot.left }} 
+                         className="absolute -translate-x-1/2 -translate-y-1/2 z-20 cursor-pointer group select-none">
+                      {p ? (
+                        <div className="flex flex-col items-center hover:scale-105 transition-transform">
+                          <button onClick={(e) => { e.stopPropagation(); setSquad(prev => { const n={...prev}; delete n[slot.id]; return n; }) }} className="absolute -top-2 -right-2 z-30 w-5 h-5 rounded-full bg-slate-900/90 text-slate-300 hover:text-white border border-slate-700 flex items-center justify-center text-[10px] shadow">✕</button>
+                          {slot.requiredStyle && (
+                            <span className={`absolute -top-4 left-1/2 -translate-x-1/2 px-1.5 py-0.5 rounded text-[8px] font-black z-30 shadow whitespace-nowrap ${isReqOk ? 'bg-amber-400 text-slate-950' : 'bg-red-600 text-white'}`}>
+                              {isReqOk ? `✓ ${slot.requiredStyle}` : `要:${slot.requiredStyle} Lv.${slot.minLevel}`}
+                            </span>
+                          )}
+                          
+                          {/* カード画像 */}
+                          <div className={`w-14 h-18 md:w-16 md:h-22 rounded-t-lg overflow-hidden border-2 border-b-0 bg-slate-950 ${isReqOk ? 'border-amber-400 shadow-amber-400/50' : (p.policy === teamPolicy ? 'border-[#00FF66]' : 'border-slate-600')}`}>
+                            <img src={window.getPlayerAvatarUrl(p)} className="w-full h-full object-cover pointer-events-none" />
+                          </div>
+
+                          {/* カード下部ネームプレート */}
+                          <div className="w-16 md:w-20 bg-slate-950/95 px-1 py-1 rounded-b-lg border-2 border-t-0 border-slate-700 text-center shadow-lg">
+                            <div className="flex justify-between items-center text-[8px] md:text-[9px] font-black text-amber-400 leading-tight">
+                              <span className="text-[#00FF66]">{slot.label}</span>
+                              <span>{inventory[p.id] || p.currentRarity}</span>
+                            </div>
+                            <div className="text-[9px] md:text-[10px] font-black text-white truncate leading-tight mt-0.5">{p.name}</div>
+                            <div className="text-[8px] md:text-[9px] font-black font-num text-[#00E5FF] leading-tight">{effPower.toLocaleString()}</div>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="w-14 h-14 md:w-18 md:h-18 rounded-full border-2 border-dashed border-emerald-400/60 bg-slate-950/70 flex flex-col items-center justify-center hover:bg-emerald-500/20 transition-colors shadow-lg">
+                          <span className="text-xs md:text-sm font-black text-emerald-300">{slot.label}</span>
+                          {slot.requiredStyle && <span className="text-[8px] text-amber-300 font-bold mt-0.5 leading-none">Lv.{slot.minLevel}</span>}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* ベンチ */}
+              <div className="glass-panel p-3 rounded-2xl border border-slate-800">
+                <h3 className="text-xs font-black text-slate-400 mb-2">🪑 ベンチ (12名)</h3>
+                <div className="grid grid-cols-6 lg:grid-cols-12 gap-1.5">
+                  {[...Array(12)].map((_, idx) => {
+                    const p = bench[idx];
+                    const effPower = p ? getPlayerEffectivePower(p, inventory[p.id] || p.currentRarity || '☆3', customBuffs, isMaxMode) : 0;
+
+                    let benchPressTimer = null;
+                    let isBenchLong = false;
+                    const handleBenchStart = () => {
+                      isBenchLong = false;
+                      benchPressTimer = setTimeout(() => {
+                        if (p) {
+                          isBenchLong = true;
+                          setSelectedDetailPlayer({ ...p, currentRarity: inventory[p.id] || p.baseRarity });
+                          setDetailTab('summary');
+                        }
+                      }, 400);
+                    };
+                    const handleBenchEnd = () => {
+                      if (benchPressTimer) clearTimeout(benchPressTimer);
+                    };
+                    const handleBenchClick = () => {
+                      if (!isBenchLong) {
+                        setActiveSlotModal({ type: 'bench', id: idx });
+                      }
+                      isBenchLong = false;
+                    };
+
+                    return (
+                      <div key={idx} 
+                           onMouseDown={handleBenchStart} onMouseUp={handleBenchEnd} onMouseLeave={handleBenchEnd}
+                           onTouchStart={handleBenchStart} onTouchEnd={handleBenchEnd}
+                           onClick={handleBenchClick}
+                           className="relative flex flex-col items-center cursor-pointer group select-none">
+                        {p ? (
+                          <div className="w-full hover:scale-105 transition-transform">
+                            <button onClick={(e) => { e.stopPropagation(); setBench(prev => { const n={...prev}; delete n[idx]; return n; }) }} className="absolute -top-1 -right-1 z-30 w-4 h-4 rounded-full bg-slate-900 text-slate-400 hover:text-white flex items-center justify-center text-[8px]">✕</button>
+                            <div className="w-full aspect-[3/4] rounded-t-lg overflow-hidden border border-b-0 border-slate-600 bg-slate-950">
+                              <img src={window.getPlayerAvatarUrl(p)} className="w-full h-full object-cover pointer-events-none" />
+                            </div>
+                            <div className="bg-slate-950/95 p-1 rounded-b-lg border border-t-0 border-slate-700 text-center w-full">
+                              <div className="text-[8px] font-bold text-white truncate">{p.name}</div>
+                              <div className="text-[7px] font-num text-[#00FF66]">{effPower.toLocaleString()}</div>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="w-full aspect-[3/4] rounded-lg border border-dashed border-slate-600 bg-slate-950/40 flex items-center justify-center text-[8px] text-slate-500 hover:text-white">SUB{idx+1}</div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAB: 所持管理 */}
+          {activeTab === 'inventory' && (
+            <div className="glass-panel p-4 rounded-3xl space-y-4 animate-fadeIn border border-slate-800">
+              <div className="flex flex-wrap justify-between gap-2 border-b border-slate-800 pb-3">
+                <h2 className="text-lg font-black text-white">📦 選手所持・育成状況</h2>
+                <div className="flex gap-2">
+                  <button onClick={() => {
+                    const data = { inventory, customBuffs, buffPresets };
+                    const a = document.createElement('a');
+                    a.href = URL.createObjectURL(new Blob([JSON.stringify(data)], {type:'application/json'}));
+                    a.download = `sfcc_backup_${new Date().toISOString().slice(0,10)}.json`;
+                    a.click();
+                  }} className="px-3 py-1 bg-slate-800 text-slate-300 text-xs font-bold rounded-lg border border-slate-700">💾 保存</button>
+                  <label className="px-3 py-1 bg-slate-800 text-slate-300 text-xs font-bold rounded-lg border border-slate-700 cursor-pointer">
+                    📂 読込 <input type="file" accept=".json" className="hidden" onChange={e => {
+                      const file = e.target.files[0];
+                      if(!file) return;
+                      const reader = new FileReader();
+                      reader.onload = ev => {
+                        try {
+                          const d = JSON.parse(ev.target.result);
+                          if(d.inventory) setInventory(d.inventory);
+                          if(d.customBuffs) setCustomBuffs(d.customBuffs);
+                          if(d.buffPresets) setBuffPresets(d.buffPresets);
+                          alert('データを復元しました');
+                        } catch(err) { alert('読み込みエラー'); }
+                      };
+                      reader.readAsText(file);
+                    }}/>
+                  </label>
+                </div>
+              </div>
+
+              {/* 絞り込み項目: 検索バー → ポジション → プレスタ → 国籍 → 所持未所持 (動的生成) */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
+                <input type="text" placeholder="名前・よみで検索..." value={invFilters.name} onChange={e=>setInvFilters({...invFilters, name: e.target.value})} className="bg-slate-950 border border-slate-700 px-3 py-2 rounded-xl text-xs text-white focus:outline-none focus:border-amber-400" />
+                <select value={invFilters.pos} onChange={e=>setInvFilters({...invFilters, pos: e.target.value})} className="bg-slate-950 border border-slate-700 px-3 py-2 rounded-xl text-xs text-white">
+                  <option value="ALL">全ポジション</option>
+                  {allPositions.map(p => <option key={p} value={p}>{p}</option>)}
+                </select>
+                <select value={invFilters.playStyle} onChange={e=>setInvFilters({...invFilters, playStyle: e.target.value})} className="bg-slate-950 border border-slate-700 px-3 py-2 rounded-xl text-xs text-white">
+                  <option value="ALL">全プレイスタイル</option>
+                  {allPlayStyles.map(s => <option key={s} value={s}>{s}</option>)}
+                </select>
+                <select value={invFilters.nat} onChange={e=>setInvFilters({...invFilters, nat: e.target.value})} className="bg-slate-950 border border-slate-700 px-3 py-2 rounded-xl text-xs text-white">
+                  <option value="ALL">全国籍</option>
+                  {allNationalities.map(n => <option key={n} value={n}>{n}</option>)}
+                </select>
+                <select value={invFilters.state} onChange={e=>setInvFilters({...invFilters, state: e.target.value})} className="bg-slate-950 border border-slate-700 px-3 py-2 rounded-xl text-xs text-white">
+                  <option value="ALL">全状態 (所持/未所持)</option>
+                  <option value="OWNED">所持のみ</option>
+                  <option value="UNOWNED">未所持のみ</option>
+                </select>
+              </div>
+
+              <div className="text-[11px] text-slate-300 flex flex-wrap items-center gap-4 bg-slate-950/70 p-2.5 rounded-xl border border-slate-800">
+                <span>🖱️ <strong className="text-emerald-400">左クリック</strong>: レアリティ進む</span>
+                <span>🖱️ <strong className="text-amber-400">右クリック</strong>: レアリティ戻る</span>
+                <span>⏱️ <strong className="text-purple-400">長押し</strong>: 自動連続ループ (1周 約3秒)</span>
+                <span>📋 <strong className="text-cyan-400">名前クリック</strong>: 詳細ステータス表示</span>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 max-h-[65vh] overflow-y-auto pr-1 scrollbar-thin">
+                {filteredInvPlayers.map(p => {
+                  const stateRarity = (inventory && typeof inventory[p.id] === 'string') ? inventory[p.id] : null;
+                  return (
+                    <div key={p.id} className={`p-2 rounded-xl border flex flex-col items-center text-center transition-all ${stateRarity ? 'bg-slate-900 border-emerald-500/50 shadow' : 'bg-slate-950/60 border-slate-800 opacity-60 hover:opacity-100'}`}>
+                      {/* 画像部分: 長押しループ(375ms) & 右クリック逆順 */}
+                      <div className="cursor-pointer mb-1 relative select-none" 
+                           onMouseDown={() => startHoldLoop(p.id)}
+                           onMouseUp={(e) => stopHoldLoop(p.id, e)}
+                           onMouseLeave={() => { if (holdTimerRef.current) clearTimeout(holdTimerRef.current); if (loopIntervalRef.current) clearInterval(loopIntervalRef.current); isLoopingRef.current = false; }}
+                           onTouchStart={() => startHoldLoop(p.id)}
+                           onTouchEnd={(e) => stopHoldLoop(p.id, e)}
+                           onContextMenu={(e) => {
+                             e.preventDefault();
+                             e.stopPropagation();
+                             handleRarityPrev(p.id);
+                           }}>
+                        <div className={`w-14 h-20 rounded-lg border-2 overflow-hidden ${stateRarity ? 'border-[#00FF66]' : 'border-slate-700'}`}>
+                          <img src={window.getPlayerAvatarUrl(p)} className="w-full h-full object-cover pointer-events-none" draggable="false" />
+                        </div>
+                        {stateRarity && <div className="absolute -bottom-2 inset-x-0 mx-auto w-max px-2 py-0.5 rounded-full text-[9px] font-black bg-amber-400 text-slate-950 shadow pointer-events-none">{stateRarity}</div>}
+                      </div>
+                      
+                      {/* テキスト部分: クリックで詳細モーダル */}
+                      <div className="mt-2 w-full cursor-pointer hover:bg-slate-800/60 rounded py-1 transition-colors" onClick={() => { setSelectedDetailPlayer({...p, currentRarity: stateRarity || p.baseRarity}); setDetailTab('summary'); }}>
+                        <div className="font-bold text-[10px] text-white truncate w-full">{p.name}</div>
+                        <div className="text-[9px] text-slate-400 truncate w-full">{p.mainPosition} | {p.playStyle}</div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* バフ設定モーダル */}
+          {isBuffModalOpen && (
+            <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex justify-center items-center p-4 animate-fadeIn">
+              <div className="glass-panel w-full max-w-lg rounded-3xl border border-slate-700 p-5 bg-slate-900 relative">
+                <button onClick={() => setIsBuffModalOpen(false)} className="absolute top-4 right-4 p-2 bg-slate-800 rounded-full hover:bg-slate-700 text-white">✕</button>
+                <h3 className="font-black text-xl text-white mb-4">⚙️ カスタムバフ ＆ プリセット</h3>
+                
+                <div className="flex items-center gap-2 mb-4 bg-slate-950 p-2 rounded-xl border border-slate-800">
+                  <input type="text" value={presetName} onChange={e=>setPresetName(e.target.value)} placeholder="プリセット名..." className="bg-slate-900 border border-slate-700 px-3 py-2 rounded-lg text-xs text-white w-full" />
+                  <button onClick={() => { if(!presetName) return; setBuffPresets([...buffPresets, { name: presetName, data: customBuffs }]); setPresetName(''); }} className="bg-amber-500/20 text-amber-400 px-4 py-2 rounded-lg text-xs font-bold border border-amber-500/40 whitespace-nowrap">保存</button>
+                </div>
+                {buffPresets.length > 0 && (
+                  <div className="flex gap-2 overflow-x-auto pb-3 mb-3 border-b border-slate-800">
+                    {buffPresets.map((pr, i) => (
+                      <div key={i} className="flex items-center gap-1 bg-slate-800 px-3 py-1.5 rounded-xl flex-shrink-0">
+                        <button onClick={() => setCustomBuffs(pr.data)} className="text-xs font-bold text-white hover:text-[#00E5FF]">{pr.name}</button>
+                        <button onClick={() => setBuffPresets(buffPresets.filter((_, idx)=>idx!==i))} className="text-red-400 hover:text-red-300 ml-2">✕</button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <div className="space-y-4 max-h-[50vh] overflow-y-auto pr-2 scrollbar-thin">
+                  <div>
+                    <div className="flex justify-between text-xs font-bold mb-1"><span className="text-slate-300">バフ上昇率</span><span className="text-[#00E5FF]">+{customBuffs.rate}%</span></div>
+                    <input type="range" min="0" max="100" step="5" value={customBuffs.rate} onChange={e => setCustomBuffs({ ...customBuffs, rate: Number(e.target.value) })} className="w-full accent-[#00E5FF]" />
+                  </div>
+                  <div>
+                    <label className="text-xs font-bold text-slate-400 block mb-2">🌐 対象国籍</label>
+                    <div className="flex flex-wrap gap-1.5">
+                      {allNationalities.map(nat => {
+                        const active = customBuffs.nationalities.includes(nat);
+                        return <button key={nat} onClick={() => setCustomBuffs({...customBuffs, nationalities: active ? customBuffs.nationalities.filter(n=>n!==nat) : [...customBuffs.nationalities, nat]})} className={`px-2.5 py-1.5 rounded-lg text-xs font-bold border transition-all ${active ? 'bg-cyan-500 text-slate-950 border-cyan-400' : 'bg-slate-900 text-slate-400 border-slate-700'}`}>{nat}</button>
+                      })}
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-xs font-bold text-slate-400 block mb-2">🛡️ 対象ポリシー</label>
+                    <div className="flex flex-wrap gap-1.5">
+                      {POLICIES.map(pol => {
+                        const active = customBuffs.policies.includes(pol);
+                        return <button key={pol} onClick={() => setCustomBuffs({...customBuffs, policies: active ? customBuffs.policies.filter(p=>p!==pol) : [...customBuffs.policies, pol]})} className={`px-2.5 py-1.5 rounded-lg text-xs font-bold border transition-all ${active ? 'bg-pink-500 text-white border-pink-400' : 'bg-slate-900 text-slate-400 border-slate-700'}`}>{pol}</button>
+                      })}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* 選手手動選択モーダル */}
+          {activeSlotModal && (
+            <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex justify-center p-2 sm:p-4 overflow-y-auto animate-fadeIn items-start pt-10">
+              <div className="glass-panel w-full max-w-3xl rounded-3xl border border-slate-700 flex flex-col max-h-[85vh] shadow-2xl bg-slate-900">
+                <div className="p-3 sm:p-4 border-b border-slate-800 flex justify-between items-center bg-slate-950/50 rounded-t-3xl">
+                  <div>
+                    <h3 className="font-black text-sm sm:text-lg text-white">選手を選択</h3>
+                    {activeSlotModal.slotDef?.requiredStyle && (
+                      <div className="mt-1 px-2 py-0.5 rounded bg-amber-400/20 text-amber-400 text-[10px] sm:text-xs font-bold inline-block border border-amber-400/30">
+                        ⭐ 要: {activeSlotModal.slotDef.requiredStyle} Lv.{activeSlotModal.slotDef.minLevel}
+                      </div>
+                    )}
+                  </div>
+                  <button onClick={() => setActiveSlotModal(null)} className="p-2 bg-slate-800 rounded-full hover:bg-slate-700 text-white">✕</button>
+                </div>
+                <div className="p-2 sm:p-3 border-b border-slate-800">
+                  <input type="text" placeholder="名前検索..." value={modalSearch} onChange={e=>setModalSearch(e.target.value)} className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2 text-xs sm:text-sm text-white focus:border-[#00FF66] focus:outline-none" />
+                </div>
+                <div className="flex-1 overflow-y-auto p-2 scrollbar-thin">
+                  {modalCandidates.length > 0 ? modalCandidates.map(p => {
+                    const isReqOk = activeSlotModal.type === 'starter' && activeSlotModal.slotDef?.requiredStyle ? checkStyleReq(p, activeSlotModal.slotDef.requiredStyle, activeSlotModal.slotDef.minLevel) : false;
+                    return (
+                      <div key={p.id} onClick={() => handleAssignPlayer(p)} className={`p-2 mb-2 border rounded-2xl flex items-center justify-between gap-2 transition-colors cursor-pointer ${isReqOk ? 'bg-amber-500/10 border-amber-400/60 hover:bg-amber-500/20' : 'bg-slate-900 border-slate-700 hover:border-[#00FF66]/50 hover:bg-slate-800/80'}`}>
+                        <div className="flex items-center gap-2 min-w-0">
+                          <img src={window.getPlayerAvatarUrl(p)} className="w-10 h-14 object-cover rounded-md border border-slate-600 flex-shrink-0" />
+                          <div className="min-w-0">
+                            <div className="flex gap-1.5 mb-0.5">
+                              <span className="px-1.5 py-0.5 rounded text-[8px] font-black bg-slate-950 text-[#00FF66]">{p.mainPosition}</span>
+                              <span className="text-[9px] font-bold text-amber-400">{p.currentRarity}</span>
+                              {p.currentLoc && <span className="text-[9px] font-bold bg-slate-800 text-white px-1.5 py-0.5 rounded ml-1">📍 {p.currentLoc}</span>}
+                            </div>
+                            <div className="font-black text-xs sm:text-sm text-white truncate">{p.name}</div>
+                            <div className="text-[9px] text-slate-400 truncate">{p.playStyle} LV.{p.playStyleLevel} | {p.nationality}</div>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-[8px] font-bold text-slate-400">バフ込総合力</div>
+                          <div className={`text-lg font-black font-num ${isReqOk ? 'text-amber-400' : 'text-[#00FF66]'}`}>{p.effectivePower.toLocaleString()}</div>
+                        </div>
+                      </div>
+                    );
+                  }) : <div className="text-center py-10 text-slate-500 text-xs font-bold">候補がいません</div>}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* 選手詳細モーダル */}
+          {selectedDetailPlayer && (
+            <div className="fixed inset-0 z-[60] bg-black/90 backdrop-blur-sm flex justify-center items-center p-2 sm:p-4 animate-fadeIn" onClick={() => setSelectedDetailPlayer(null)}>
+              <div className="glass-panel p-4 sm:p-6 rounded-3xl w-full max-w-lg flex flex-col border border-slate-700 bg-slate-900 shadow-2xl max-h-[90vh] overflow-y-auto" onClick={e=>e.stopPropagation()}>
+                <div className="flex justify-between items-start mb-4">
+                  <div className="flex items-center gap-4">
+                    <div className="w-20 h-28 rounded-lg overflow-hidden border-2 border-[#00FF66] shadow-lg flex-shrink-0"><img src={window.getPlayerAvatarUrl(selectedDetailPlayer)} className="w-full h-full object-cover" /></div>
+                    <div>
+                      <div className="text-xs font-black text-amber-400 mb-1">{selectedDetailPlayer.currentRarity} {selectedDetailPlayer.currentRarity === '☆5' && selectedDetailPlayer.maxEnhanced && '🔥'}</div>
+                      <h2 className="text-xl sm:text-2xl font-black text-white mb-1">{selectedDetailPlayer.name}</h2>
+                      <div className="text-xs text-slate-400">{selectedDetailPlayer.mainPosition} | {selectedDetailPlayer.nationality}</div>
+                      <div className="text-xs font-bold text-purple-300 mt-1">{selectedDetailPlayer.playStyle} LV.{selectedDetailPlayer.playStyleLevel}</div>
+                    </div>
+                  </div>
+                  <button onClick={() => setSelectedDetailPlayer(null)} className="p-1.5 bg-slate-800 rounded-full hover:bg-slate-700 text-white">✕</button>
+                </div>
+
+                <div className="flex bg-slate-950 p-1 rounded-xl border border-slate-800 mb-4">
+                  <button onClick={() => setDetailTab('summary')} className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all ${detailTab === 'summary' ? 'bg-[#00FF66]/20 text-[#00FF66]' : 'text-slate-400'}`}>能力・詳細</button>
+                  <button onClick={() => setDetailTab('tendency')} className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all ${detailTab === 'tendency' ? 'bg-amber-500/20 text-amber-400' : 'text-slate-400'}`}>意識</button>
+                </div>
+
+                {detailTab === 'summary' && (
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-3 text-center">
+                      <div className="bg-slate-950 p-3 rounded-xl border border-slate-800">
+                        <div className="text-[10px] text-slate-400 mb-1">現在の総合力</div>
+                        <div className="text-2xl font-black font-num text-[#00FF66]">
+                          {getPlayerOverall(selectedDetailPlayer, selectedDetailPlayer.currentRarity || '☆3', isMaxMode).toLocaleString()}
+                        </div>
+                      </div>
+                      <div className="bg-slate-950 p-3 rounded-xl border border-slate-800">
+                        <div className="text-[10px] text-slate-400 mb-1">能力合計実数値</div>
+                        <div className="text-2xl font-black font-num text-[#00E5FF]">
+                          {getPlayerTotalStats18(selectedDetailPlayer, isMaxMode).toLocaleString()}
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* 6大カテゴリセレクター */}
+                    <div>
+                      <div className="text-[10px] text-slate-400 mb-1.5 font-bold">パラメータ選択で下部に詳細を表示:</div>
+                      <div className="grid grid-cols-3 sm:grid-cols-6 gap-1.5 text-center text-xs">
+                        {[
+                          { key: 'shoot', label: 'SHO' },
+                          { key: 'pass', label: 'PAS' },
+                          { key: 'dribble', label: 'DRB' },
+                          { key: 'defense', label: 'DEF' },
+                          { key: 'physical', label: 'PHY' },
+                          { key: 'speed', label: 'SPD' }
+                        ].map(cat => {
+                          const isSelected = selectedDetailCategory === cat.key;
+                          return (
+                            <button key={cat.key} onClick={() => setSelectedDetailCategory(cat.key)} className={`p-2 rounded-xl border transition-all ${isSelected ? 'bg-[#00FF66]/20 border-[#00FF66] text-[#00FF66] shadow' : 'bg-slate-800/50 border-slate-700 text-slate-300 hover:bg-slate-800'}`}>
+                              <div className="text-[10px] font-bold">{cat.label}</div>
+                              <div className="text-sm font-black mt-0.5">{getCategoryTotal(selectedDetailPlayer, cat.key, isMaxMode)}</div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* 選択されたカテゴリのサブパラメータ展開エリア */}
+                    {(() => {
+                      const labels = {
+                        shoot: { finishing: '決定力', power: 'キック力', composure: '冷静さ' },
+                        pass: { shortPass: 'ショートパス', longPass: 'ロングパス', accuracy: 'キック精度' },
+                        dribble: { breakout: '突破力', keeping: 'キープ力', ballTouch: 'ボールタッチ' },
+                        defense: { tackle: 'タックル', interception: 'パスカット', marking: 'マーク' },
+                        physical: { jumping: 'ジャンプ', contact: 'コンタクト', stamina: 'スタミナ' },
+                        speed: { running: '走力', agility: '敏捷性' }
+                      };
+                      const source = (isMaxMode && selectedDetailPlayer.maxEnhanced?.detailStats) ? selectedDetailPlayer.maxEnhanced : selectedDetailPlayer;
+                      const catStats = source.detailStats?.[selectedDetailCategory] || {};
+                      const catTotal = getCategoryTotal(selectedDetailPlayer, selectedDetailCategory, isMaxMode);
+
+                      return (
+                        <div className="bg-slate-950 p-3.5 rounded-2xl border border-slate-800 space-y-2">
+                          <div className="flex justify-between items-center border-b border-slate-800 pb-2">
+                            <span className="text-xs font-black text-[#00FF66]">{selectedDetailCategory.toUpperCase()} 詳細内訳</span>
+                            <span className="text-xs font-bold text-slate-400">計 {catTotal}</span>
+                          </div>
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                            {Object.keys(labels[selectedDetailCategory]).map(sub => (
+                              <div key={sub} className="bg-slate-900/80 p-2 rounded-xl border border-slate-800 flex justify-between sm:flex-col sm:items-center sm:text-center">
+                                <span className="text-[11px] text-slate-400 font-bold">{labels[selectedDetailCategory][sub]}</span>
+                                <span className="text-sm font-black text-white font-num sm:mt-1">{catStats[sub] || Math.floor(catTotal / 3)}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })()}
+
+                    {selectedDetailPlayer.skill && (
+                      <div className="bg-slate-950 p-3 rounded-xl border border-slate-800">
+                        <div className="text-[10px] font-bold text-slate-400 mb-1">スキル</div>
+                        <span className="text-xs font-black text-amber-300">[{selectedDetailPlayer.skill.rank}] {selectedDetailPlayer.skill.name}</span>
+                        <div className="text-[10px] text-slate-300 mt-1">{selectedDetailPlayer.skill.description}</div>
+                      </div>
+                    )}
+                    {selectedDetailPlayer.abilities?.length > 0 && (
+                      <div className="bg-slate-950 p-3 rounded-xl border border-slate-800">
+                        <div className="text-[10px] font-bold text-slate-400 mb-1">アビリティ</div>
+                        {selectedDetailPlayer.abilities.map((ab, i) => (
+                          <div key={i} className="mb-1.5 last:mb-0">
+                            <span className="text-xs font-black text-purple-300">[{ab.rank}] {ab.name}</span>
+                            <div className="text-[10px] text-slate-300">{ab.description}</div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {detailTab === 'tendency' && (
+                  <div className="grid grid-cols-2 gap-2">
+                    {[
+                      { key: 'attack', label: '攻撃意識' }, { key: 'defense', label: '守備意識' }, { key: 'dribble', label: 'ドリブル意識' }, { key: 'shoot', label: 'シュート意識' },
+                      { key: 'longShoot', label: 'ロングシュート意識' }, { key: 'shortPass', label: 'ショートパス意識' }, { key: 'longPass', label: 'ロングパス意識' }, { key: 'throughPass', label: 'スルーパス意識' },
+                      { key: 'cutIn', label: '切り込み意識' }, { key: 'keep', label: 'キープ意識' }, { key: 'delay', label: 'ディレイ意識' }, { key: 'rushOut', label: '飛び出し意識' },
+                      { key: 'feint', label: 'フェイント意識' }, { key: 'press', label: 'プレス意識' }
+                    ].map(item => {
+                      const v = selectedDetailPlayer.playTendencies?.[item.key] || 0;
+                      return (
+                        <div key={item.key} className="bg-slate-950 p-2 rounded-xl border border-slate-800 flex justify-between items-center">
+                          <span className="text-[10px] text-slate-300">{item.label}</span>
+                          <span className={`text-xs font-num font-black ${v>0?'text-amber-400':v<0?'text-cyan-400':'text-slate-500'}`}>{v>0?`+${v}`:v}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+</body>
+</html>
